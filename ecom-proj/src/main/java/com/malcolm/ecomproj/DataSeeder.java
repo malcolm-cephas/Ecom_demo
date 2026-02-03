@@ -1,0 +1,110 @@
+package com.malcolm.ecomproj;
+
+import com.malcolm.ecomproj.model.Product;
+import com.malcolm.ecomproj.repo.ProductRepo;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.jdbc.datasource.init.ScriptUtils;
+import org.springframework.stereotype.Component;
+
+import javax.sql.DataSource;
+import java.io.File;
+import java.nio.file.Files;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.util.List;
+
+@Component
+@Slf4j
+@RequiredArgsConstructor
+public class DataSeeder implements CommandLineRunner {
+
+    private final DataSource dataSource;
+    private final ProductRepo repo;
+
+    @Override
+    public void run(String... args) {
+        seedDatabase();
+        loadImages();
+    }
+
+    private void seedDatabase() {
+        try (Connection conn = dataSource.getConnection();
+                Statement stmt = conn.createStatement()) {
+
+            try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM product")) {
+                if (rs.next()) {
+                    int count = rs.getInt(1);
+                    if (count == 0) {
+                        Resource resource = new ClassPathResource("data.sql");
+                        if (resource.exists()) {
+                            ScriptUtils.executeSqlScript(conn, resource);
+                            // Only commit if auto-commit is disabled, though typically it is enabled by
+                            // default for connections
+                            if (!conn.getAutoCommit()) {
+                                conn.commit();
+                            }
+                            log.info("Database seeded successfully from data.sql");
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error seeding database: {}", e.getMessage(), e);
+        }
+    }
+
+    private void loadImages() {
+        // Consider moving this path to application.properties
+        String imageDirectoryPath = "D:\\Malcolm\\DSCE\\Internship\\SENSEI\\ecom image";
+
+        try {
+            List<Product> products = repo.findAll();
+            int updatedCount = 0;
+
+            for (Product product : products) {
+                String imgName = product.getImageName();
+                boolean derived = false;
+
+                if (imgName == null || imgName.isEmpty()) {
+                    String derivedName = product.getName().toLowerCase().replaceAll("[ -]", "_") + ".jpg";
+                    File checkFile = new File(imageDirectoryPath, derivedName);
+
+                    if (checkFile.exists()) {
+                        imgName = derivedName;
+                        product.setImageName(imgName);
+                        derived = true;
+                    }
+                }
+
+                if (imgName != null && !imgName.isEmpty()) {
+                    File imageFile = new File(imageDirectoryPath, imgName);
+
+                    if (imageFile.exists()) {
+                        byte[] imageBytes = Files.readAllBytes(imageFile.toPath());
+                        product.setImageData(imageBytes);
+
+                        if (product.getImageType() == null || product.getImageType().isEmpty()) {
+                            String fileName = imageFile.getName();
+                            String type = fileName.endsWith(".png") ? "image/png" : "image/jpeg";
+                            product.setImageType(type);
+                        }
+
+                        repo.save(product);
+                        updatedCount++;
+                    }
+                }
+            }
+            if (updatedCount > 0) {
+                log.info("Loaded images for {} products", updatedCount);
+            }
+        } catch (Exception e) {
+            log.error("Error loading images: {}", e.getMessage(), e);
+        }
+    }
+}
