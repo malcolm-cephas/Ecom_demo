@@ -1,0 +1,15 @@
+﻿{
+  "mcpServers": {
+    "ecom-ai": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sse",
+        "--url",
+        "http://localhost:9091/sse"
+      ],
+      "description": "E-commerce product management MCP server",
+      "enabled": true
+    }
+  }
+}

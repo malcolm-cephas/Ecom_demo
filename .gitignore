@@ -1,0 +1,41 @@
+# Java
+target/
+*.class
+
+# Maven
+.mvn/
+mvnw
+mvnw.cmd
+
+# IntelliJ / Eclipse / VS Code
+.idea/
+*.iml
+.vscode/
+*.classpath
+*.project
+*.settings/
+
+# Node / Frontend
+node_modules/
+dist/
+build/
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets backup
+*.bak
+*.secret
+*.bk

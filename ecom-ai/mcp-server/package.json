@@ -1,0 +1,12 @@
+﻿{
+    "name": "mcp-bridge",
+    "version": "1.0.0",
+    "description": "Bridge between Claude Desktop stdio and HTTP/SSE MCP server",
+    "main": "mcp-bridge.js",
+    "scripts": {
+        "start": "node mcp-bridge.js"
+    },
+    "dependencies": {
+        "eventsource": "^2.0.2"
+    }
+}
