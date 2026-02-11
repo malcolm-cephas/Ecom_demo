@@ -238,7 +238,12 @@ To use with Claude Desktop, add this to your `%APPDATA%\Claude\claude_desktop_co
 - Verify log files exist in `./Logs/` directory
 - Ensure services have write permissions to the Logs folder
 
----
+
+
+## 📚 Related Projects
+
+- [opencode-antigravity-autopilot](https://github.com/Gooseware/opencode-antigravity-autopilot) - Model Switching Inspiration
+
 
 ## 🤝 Contributing
 Feel free to fork this repository and submit pull requests. For major changes, please open an issue first to discuss what you would like to change.
