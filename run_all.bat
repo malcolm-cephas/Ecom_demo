@@ -4,26 +4,37 @@ setlocal
 echo Starting Ecommerce Application Services...
 echo ===========================================
 
+echo Clearing and initializing log files...
+if not exist "D:\Malcolm\DSCE\Internship\SENSEI\ecommerce\Logs" mkdir "D:\Malcolm\DSCE\Internship\SENSEI\ecommerce\Logs"
+type nul > "D:\Malcolm\DSCE\Internship\SENSEI\ecommerce\Logs\react_frontend.log"
+type nul > "D:\Malcolm\DSCE\Internship\SENSEI\ecommerce\Logs\spring_backend.log"
+type nul > "D:\Malcolm\DSCE\Internship\SENSEI\ecommerce\Logs\mcp_server.log"
+type nul > "D:\Malcolm\DSCE\Internship\SENSEI\ecommerce\Logs\mcp_client.log"
+
 :: 1. Start Frontend (ecom-frontend) on default port (usually 5173)
 echo [1/4] Starting Frontend...
-start "Frontend (Port 5173)" cmd /k "cd ecom-frontend && npm run dev"
+start "Frontend (Port 5173)" powershell -NoExit -Command "cd 'ecom-frontend'; npm run dev 2>&1 | Tee-Object -FilePath 'D:\Malcolm\DSCE\Internship\SENSEI\ecommerce\Logs\react_frontend.log'"
 timeout /t 5 /nobreak > nul
 
 :: 2. Start Core Backend API (ecom-proj) on Port 8080
 echo [2/4] Starting Core Backend (Hub)...
-start "Core Backend (Port 8080)" cmd /k "cd ecom-proj && mvnw spring-boot:run"
+start "Core Backend (Port 8080)" powershell -NoExit -Command "cd 'ecom-proj'; .\mvnw.cmd spring-boot:run 2>&1 | Tee-Object -FilePath 'D:\Malcolm\DSCE\Internship\SENSEI\ecommerce\Logs\spring_backend.log'"
 echo Waiting for Core Backend to initialize...
 timeout /t 20 /nobreak > nul
 
 :: 3. Start MCP Server (ecom-ai/mcp-server) on Port 9091
 echo [3/4] Starting MCP Server...
-start "MCP Server (Port 9091)" cmd /k "cd ecom-ai/mcp-server && mvnw spring-boot:run"
+start "MCP Server (Port 9091)" powershell -NoExit -Command "cd 'ecom-ai/mcp-server'; .\mvnw.cmd spring-boot:run 2>&1 | Tee-Object -FilePath 'D:\Malcolm\DSCE\Internship\SENSEI\ecommerce\Logs\mcp_server.log'"
 echo Waiting for MCP Server to initialize...
 timeout /t 15 /nobreak > nul
 
 :: 4. Start MCP Client (ecom-ai/mcp-client) on Port 9090
 echo [4/4] Starting MCP Client...
-start "MCP Client (Port 9090)" cmd /k "cd ecom-ai/mcp-client && mvnw spring-boot:run"
+start "MCP Client (Port 9090)" powershell -NoExit -Command "cd 'ecom-ai/mcp-client'; .\mvnw.cmd spring-boot:run 2>&1 | Tee-Object -FilePath 'D:\Malcolm\DSCE\Internship\SENSEI\ecommerce\Logs\mcp_client.log'"
+
+:: 5. Start Log Monitor
+echo [5/5] Starting Log Monitor...
+start "Log Monitor" powershell -NoExit -ExecutionPolicy Bypass -File "D:\Malcolm\DSCE\Internship\SENSEI\ecommerce\monitor_logs.ps1"
 
 echo ===========================================
 echo All services are launching in separate windows.

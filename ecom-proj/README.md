@@ -9,6 +9,7 @@ The foundational **Spring Boot** service that powers the E-Commerce platform. It
 3.  **Automated Seeding**: Includes a `DataSeeder` that automatically populates the DB from `data.sql` and synchronizes image files from a local directory on startup.
 4.  **Search & Pagination**: Implementation of search logic and paginated results for the frontend.
 5.  **Database Master**: Manages the schema and connections to the MySQL database `springbootdb`.
+6.  **Request Logging**: All incoming HTTP requests are logged with `[BACKEND-REQUEST]` prefix for debugging and monitoring.
 
 > **Note**: This service focuses purely on *business logic*. AI and Chat capabilities are delegated to the `ecom-ai` service.
 
@@ -39,10 +40,35 @@ spring.datasource.password=your_password
 ```
 
 ### 3. Start Application
+
+#### Option 1: Automated (Recommended)
+From the project root, run:
 ```bash
-mvn spring-boot:run
+run_all.bat
+```
+This starts all services including the backend.
+
+#### Option 2: Manual
+```bash
+mvnw spring-boot:run
 ```
 Server starts on: `http://localhost:8080`
+
+---
+
+## 📊 Logging
+
+Logs are output to both:
+- **Console/Terminal**: Real-time request monitoring
+- **Log File**: `../Logs/spring_backend.log`
+
+All HTTP requests are logged with the format:
+```
+[BACKEND-REQUEST] GET /api/products
+[BACKEND-REQUEST] POST /api/products
+```
+
+---
 
 ## 📚 API Documentation
 *   Swagger UI: [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)

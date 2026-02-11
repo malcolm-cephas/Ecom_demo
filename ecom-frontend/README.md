@@ -6,9 +6,10 @@ This is the user interface for the E-Commerce platform, built with **React** and
 
 *   **Product Gallery**: Browse products with dynamic images served directly from the backend.
 *   **Search & Filter**: Find products using a real-time search bar and category filters.
-*   **AI Chat Integration**: An integrated chat widget that allows users to talk to an intelligent store assistant.
+*   **AI Chat Integration**: An integrated chat widget that allows users to talk to an intelligent store assistant powered by Groq AI.
 *   **Cart & Favorites**: Full shopping functionality including managing a shopping cart and a "Favorites" list.
 *   **Clean UI**: Responsive design built with Bootstrap 5 and customized CSS.
+*   **Request Logging**: All incoming requests are logged with `[Request]` prefix for debugging.
 
 ---
 
@@ -27,11 +28,19 @@ This is the user interface for the E-Commerce platform, built with **React** and
 
 *   [Node.js](https://nodejs.org/) (v18 or higher)
 *   The **Backend** (`ecom-proj`) running on port `8080`.
-*   The **AI Service** (`ecom-ai`) running on port `8081` (for chat features).
+*   The **MCP Client** (`ecom-ai/mcp-client`) running on port `9090` (for chat features).
 
 ---
 
 ## 🏃‍♂️ Setup & Run
+
+### Option 1: Automated (Recommended)
+From the project root, run:
+```bash
+run_all.bat
+```
+
+### Option 2: Manual
 
 1.  **Install Dependencies**:
     ```bash
@@ -52,9 +61,24 @@ This is the user interface for the E-Commerce platform, built with **React** and
 
 This frontend connects to two backend services:
 *   **Core API**: `http://localhost:8080` (Products, Images)
-*   **AI API**: `http://localhost:8081` (Chat, Intelligent Search)
+*   **AI API**: `http://localhost:9090` (Chat, Intelligent Search)
 
 Make sure both services are running for full functionality.
+
+---
+
+## 📊 Logging
+
+Logs are output to both:
+- **Console/Terminal**: Real-time request monitoring
+- **Log File**: `../Logs/react_frontend.log`
+
+Request format:
+```
+[Request] GET /
+[Request] GET /assets/index.js
+[Request] POST /api/products
+```
 
 ---
 
