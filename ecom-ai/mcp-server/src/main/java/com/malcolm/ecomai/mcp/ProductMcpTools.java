@@ -82,4 +82,49 @@ public class ProductMcpTools {
             return "Failed to toggle favorite: " + e.getMessage();
         }
     }
+
+    @Tool(description = "Check stock availability for a product by name. Returns the available quantity.")
+    public String checkStock(String productName) {
+        List<Product> products = backendClient.searchProducts(productName);
+        if (products.isEmpty()) {
+            return "Product not found: " + productName;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (Product product : products) {
+            sb.append(String.format("Product: %s (ID: %d) - Stock: %d\n", product.getName(), product.getId(),
+                    product.getStockQuantity()));
+        }
+        return sb.toString();
+    }
+
+    @Tool(description = "Add a product to the cart after verifying stock. Requires product name and quantity.")
+    public String addToCart(String productName, String quantity) {
+        int quantityInt;
+        try {
+            quantityInt = Integer.parseInt(quantity);
+        } catch (NumberFormatException e) {
+            return "FAILURE: Quantity must be a valid number.";
+        }
+
+        List<Product> products = backendClient.searchProducts(productName);
+        if (products.isEmpty()) {
+            return "Product not found: " + productName;
+        }
+
+        // Use the first match
+        Product product = products.get(0);
+
+        if (product.getStockQuantity() >= quantityInt) {
+            try {
+                backendClient.addToCart(product.getId(), quantityInt);
+                return String.format("SUCCESS: Added %d x %s to cart. (Stock remaining: %d)", quantityInt,
+                        product.getName(), product.getStockQuantity() - quantityInt);
+            } catch (Exception e) {
+                return "Error adding to cart: " + e.getMessage();
+            }
+        } else {
+            return String.format("FAILURE: Insufficient stock for %s. Requested: %d, Available: %d", product.getName(),
+                    quantityInt, product.getStockQuantity());
+        }
+    }
 }

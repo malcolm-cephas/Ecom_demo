@@ -52,10 +52,10 @@ graph TD
 
 | Module | Role | Tech Stack | Port |
 | :--- | :--- | :--- | :--- |
-| **[`ecom-proj`](./ecom-proj)** | **Core Backend** | Spring Boot, MySQL | `8080` (REST) |
-| **[`ecom-ai/mcp-server`](./ecom-ai/mcp-server)** | **MCP Server** | Spring AI, MCP | `9091` (SSE) |
-| **[`ecom-ai/mcp-client`](./ecom-ai/mcp-client)** | **MCP Client / Chat** | Spring AI, Groq | `9090` (Web) |
-| **[`ecom-frontend`](./ecom-frontend)** | **User Interface** | React 18, Vite | `5173` |
+| **[`ecom-proj`](./ecom-proj)** | **Core Backend Hub** | Spring Boot, MySQL | `8080` (REST) |
+| **[`ecom-ai/mcp-server`](./ecom-ai/mcp-server)** | **MCP Tool Server** | Spring AI, MCP, Basic Auth | `9091` (SSE) |
+| **[`ecom-ai/mcp-client`](./ecom-ai/mcp-client)** | **AI Assistant Client** | Spring AI, Groq, Basic Auth | `9090` (Web) |
+| **[`ecom-frontend`](./ecom-frontend)** | **Interactive Web UI** | React 18, Vite | `5173` |
 
 ---
 

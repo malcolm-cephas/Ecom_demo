@@ -5,10 +5,11 @@ This module acts as the **AI Orchestrator**. It contains the LLM integration, ch
 ## 🎯 Primary Functions
 
 1.  **AI Chat Assistant**: Provides a REST API (`POST /api/ai/chat`) for frontend applications to interact with the AI.
-2.  **MCP Client**: Establishes a connection to the **MCP Server** (on port 9091) to discover and execute tools dynamically.
-3.  **LLM Gateway**: Connects to **Groq** with automatic model rotation across 18 available models.
-4.  **Intelligent Failover**: Automatically switches models when rate limits are encountered.
-5.  **Request Logging**: All incoming requests are logged with `[MCP-CLIENT-REQUEST]` prefix.
+2.  **MCP Client**: Establishes a synchronized connection to the **MCP Server** (on port 9091) using manual bean configuration for stability.
+3.  **Basic Auth Integration**: Employs **pre-emptive Basic Authentication** to reliably handle the SSE handshake and protocol messaging.
+4.  **LLM Gateway**: Connects to **Groq** with automatic model rotation across 18 available models.
+5.  **Intelligent Failover**: Automatically switches models when rate limits are encountered.
+6.  **Request Logging**: All incoming requests are logged with `[MCP-CLIENT-REQUEST]` prefix.
 
 ## 🛠️ Technology Stack
 

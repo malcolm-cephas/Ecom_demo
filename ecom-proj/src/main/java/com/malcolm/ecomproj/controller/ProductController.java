@@ -145,6 +145,19 @@ public class ProductController {
         return new ResponseEntity<>(products, HttpStatus.OK);
     }
 
+    /**
+     * Updates the stock quantity of a product.
+     */
+    @PatchMapping("/product/{id}/stock")
+    public ResponseEntity<Product> updateStock(@PathVariable int id, @RequestBody int stock) {
+        Product product = service.updateStock(id, stock);
+        if (product != null) {
+            return new ResponseEntity<>(product, HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
     @GetMapping("/products/search/page")
     public ResponseEntity<Page<Product>> searchProductsPaginated(
             @RequestParam String keyword,

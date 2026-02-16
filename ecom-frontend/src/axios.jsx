@@ -3,7 +3,7 @@ import axios from "axios";
 // Create a centralized Axios instance for all HTTP requests to the backend
 const API = axios.create({
   // The base URL for the Spring Boot REST API
-  baseURL: "http://127.0.0.1:8080/api",
+  baseURL: "http://localhost:8080/api",
 });
 
 

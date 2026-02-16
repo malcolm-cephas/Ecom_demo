@@ -10,6 +10,7 @@ import Favourites from "./components/Favourites";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppProvider } from "./Context/Context"; // Global state for products and cart
 import UpdateProduct from "./components/UpdateProduct";
+import Dashboard from "./components/Dashboard"; // Import Dashboard
 import "bootstrap/dist/css/bootstrap.min.css"; // Global styles
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { ToastProvider } from "./Context/ToastContext"; // UI notifications
@@ -44,6 +45,7 @@ function App() {
             <Route path="/cart" element={<Cart />} />
             <Route path="/favourites" element={<Favourites />} />
             <Route path="/product/update/:id" element={<UpdateProduct />} />
+            <Route path="/dashboard" element={<Dashboard />} />
           </Routes>
         </BrowserRouter>
       </ToastProvider>

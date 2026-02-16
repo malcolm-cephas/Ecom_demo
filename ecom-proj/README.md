@@ -10,8 +10,9 @@ The foundational **Spring Boot** service that powers the E-Commerce platform. It
 4.  **Search & Pagination**: Implementation of search logic and paginated results for the frontend.
 5.  **Database Master**: Manages the schema and connections to the MySQL database `springbootdb`.
 6.  **Request Logging**: All incoming HTTP requests are logged with `[BACKEND-REQUEST]` prefix for debugging and monitoring.
+7.  **Data Provider for MCP**: Serves as the authoritative source for all products and categories used by the AI assistant.
 
-> **Note**: This service focuses purely on *business logic*. AI and Chat capabilities are delegated to the `ecom-ai` service.
+> **Note**: This service is the "Source of Truth" for the entire ecosystem. AI and Chat capabilities inhabit the `ecom-ai` services but rely strictly on this API.
 
 ---
 

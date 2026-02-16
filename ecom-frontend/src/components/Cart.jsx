@@ -6,127 +6,52 @@ import { Button } from 'react-bootstrap';
 import { useToast } from "../Context/ToastContext";
 
 const Cart = () => {
-  const { cart, removeFromCart, clearCart } = useContext(AppContext);
+  const { cart, removeFromCart, clearCart, updateQuantity } = useContext(AppContext);
   const { addToast } = useToast();
-  const [cartItems, setCartItems] = useState([]);
   const [totalPrice, setTotalPrice] = useState(0);
-  const [cartImage, setCartImage] = useState([]);
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
-    const fetchImagesAndUpdateCart = async () => {
-      try {
-        const response = await axios.get("/products");
-        const backendProductIds = response.data.map((product) => product.id);
-
-        const updatedCartItems = cart.filter((item) => backendProductIds.includes(item.id));
-        const cartItemsWithImages = await Promise.all(
-          updatedCartItems.map(async (item) => {
-            try {
-              const response = await axios.get(
-                `/product/${item.id}/image`,
-                { responseType: "blob" }
-              );
-              const imageFile = await converUrlToFile(response.data, response.data.imageName);
-              setCartImage(imageFile)
-              const imageUrl = URL.createObjectURL(response.data);
-              return { ...item, imageUrl };
-            } catch (error) {
-              console.error("Error fetching image:", error);
-              return { ...item, imageUrl: "placeholder-image-url" };
-            }
-          })
-        );
-        console.log("cart", cart)
-        setCartItems(cartItemsWithImages);
-      } catch (error) {
-        console.error("Error fetching product data:", error);
-      }
-    };
-
-    if (cart.length) {
-      fetchImagesAndUpdateCart();
-    }
-  }, [cart]);
-
-  useEffect(() => {
-    const total = cartItems.reduce(
+    const total = cart.reduce(
       (acc, item) => acc + item.price * item.quantity,
       0
     );
     setTotalPrice(total);
-  }, [cartItems]);
+  }, [cart]);
 
-  const converUrlToFile = async (blobData, fileName) => {
-    const file = new File([blobData], fileName, { type: blobData.type });
-    return file;
-  }
-
-  const handleIncreaseQuantity = (itemId) => {
-    const newCartItems = cartItems.map((item) => {
-      if (item.id === itemId) {
-        if (item.quantity < item.stockQuantity) {
-          return { ...item, quantity: item.quantity + 1 };
-        } else {
-          addToast("Cannot add more than available stock", "error");
-        }
-      }
-      return item;
-    });
-    setCartItems(newCartItems);
+  const handleIncreaseQuantity = (item) => {
+    if (item.quantity < item.stockQuantity) {
+      updateQuantity(item.id, item.quantity + 1);
+    } else {
+      addToast("Cannot add more than available stock", "error");
+    }
   };
 
-
-  const handleDecreaseQuantity = (itemId) => {
-    const newCartItems = cartItems.map((item) =>
-      item.id === itemId
-        ? { ...item, quantity: Math.max(item.quantity - 1, 1) }
-        : item
-    );
-    setCartItems(newCartItems);
+  const handleDecreaseQuantity = (item) => {
+    if (item.quantity > 1) {
+      updateQuantity(item.id, item.quantity - 1);
+    }
   };
 
   const handleRemoveFromCart = (itemId) => {
     removeFromCart(itemId);
-    const newCartItems = cartItems.filter((item) => item.id !== itemId);
-    setCartItems(newCartItems);
   };
 
   const handleCheckout = async () => {
     try {
-      for (const item of cartItems) {
-        const { imageUrl, imageName, imageData, imageType, quantity, ...rest } = item;
+      for (const item of cart) {
         const updatedStockQuantity = item.stockQuantity - item.quantity;
-
-        const updatedProductData = { ...rest, stockQuantity: updatedStockQuantity };
-        console.log("updated product data", updatedProductData)
-
-        const cartProduct = new FormData();
-        cartProduct.append("imageFile", cartImage);
-        cartProduct.append(
-          "product",
-          new Blob([JSON.stringify(updatedProductData)], { type: "application/json" })
-        );
-
-        await axios
-          .put(`/product/${item.id}`, cartProduct, {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          })
-          .then((response) => {
-            console.log("Product updated successfully:", (cartProduct));
-          })
-          .catch((error) => {
-            console.error("Error updating product:", error);
-          });
+        // Use the new PATCH endpoint for updating stock
+        await axios.patch(`/product/${item.id}/stock`, Number(updatedStockQuantity), {
+          headers: { "Content-Type": "application/json" }
+        });
       }
       addToast("Checkout successful!", "success");
       clearCart();
-      setCartItems([]);
       setShowModal(false);
     } catch (error) {
       console.log("error during checkout", error);
+      addToast("Checkout failed", "error");
     }
   };
 
@@ -134,18 +59,17 @@ const Cart = () => {
     <div className="cart-container">
       <div className="shopping-cart">
         <div className="title">Shopping Bag</div>
-        {cartItems.length === 0 ? (
+        {cart.length === 0 ? (
           <div className="empty" style={{ textAlign: "left", padding: "2rem" }}>
             <h4>Your cart is empty</h4>
           </div>
         ) : (
           <>
-            {cartItems.map((item) => (
+            {cart.map((item) => (
               <li key={item.id} className="cart-item">
                 <div
                   className="item"
                   style={{ display: "flex", alignContent: "center" }}
-                  key={item.id}
                 >
                   <div className="buttons">
                     <div className="buttons-liked">
@@ -154,9 +78,10 @@ const Cart = () => {
                   </div>
                   <div>
                     <img
-                      src={item.imageUrl}
+                      src={`http://localhost:8080/api/product/${item.id}/image`}
                       alt={item.name}
                       className="cart-item-image"
+                      onError={(e) => { e.target.src = "https://placehold.co/100"; }}
                     />
                   </div>
                   <div className="description">
@@ -168,22 +93,19 @@ const Cart = () => {
                     <button
                       className="plus-btn"
                       type="button"
-                      name="button"
-                      onClick={() => handleIncreaseQuantity(item.id)}
+                      onClick={() => handleIncreaseQuantity(item)}
                     >
                       <i className="bi bi-plus-square-fill"></i>
                     </button>
                     <input
                       type="button"
-                      name="name"
                       value={item.quantity}
                       readOnly
                     />
                     <button
                       className="minus-btn"
                       type="button"
-                      name="button"
-                      onClick={() => handleDecreaseQuantity(item.id)}
+                      onClick={() => handleDecreaseQuantity(item)}
                     >
                       <i className="bi bi-dash-square-fill"></i>
                     </button>
@@ -215,7 +137,7 @@ const Cart = () => {
       <CheckoutPopup
         show={showModal}
         handleClose={() => setShowModal(false)}
-        cartItems={cartItems}
+        cartItems={cart}
         totalPrice={totalPrice}
         handleCheckout={handleCheckout}
       />

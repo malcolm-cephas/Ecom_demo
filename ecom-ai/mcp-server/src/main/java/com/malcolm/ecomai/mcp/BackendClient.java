@@ -55,4 +55,15 @@ public class BackendClient {
                 .toBodilessEntity()
                 .block();
     }
+
+    public void addToCart(int productId, int quantity) {
+        webClient.post()
+                .uri(uriBuilder -> uriBuilder.path("/cart/add")
+                        .queryParam("productId", productId)
+                        .queryParam("quantity", quantity)
+                        .build())
+                .retrieve()
+                .toBodilessEntity()
+                .block();
+    }
 }

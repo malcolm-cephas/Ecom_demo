@@ -58,6 +58,21 @@ public class ProductService {
         return repo.save(product);
     }
 
+    public Product updateStock(int id, int stock) {
+        Product product = repo.findById(id).orElse(null);
+        if (product != null) {
+            product.setStockQuantity(stock);
+            // Auto update availability if stock is positive
+            if (stock > 0 && !product.isAvailable()) {
+                product.setAvailable(true);
+            } else if (stock == 0 && product.isAvailable()) {
+                product.setAvailable(false);
+            }
+            return repo.save(product);
+        }
+        return null;
+    }
+
     public void deleteProduct(int id) {
         repo.deleteById(id);
     }

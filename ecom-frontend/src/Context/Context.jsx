@@ -7,39 +7,16 @@ const AppContext = createContext({
   cart: [],
   addToCart: (product) => { },
   removeFromCart: (productId) => { },
+  updateQuantity: (productId, quantity) => { },
   toggleFavorite: (productId) => { },
+  clearCart: () => { },
 });
 
 export const AppProvider = ({ children }) => {
   const [data, setData] = useState([]);
   const [isError, setIsError] = useState("");
-  const [cart, setCart] = useState(JSON.parse(localStorage.getItem('cart')) || []);
+  const [cart, setCart] = useState([]);
 
-
-  const addToCart = (product) => {
-    const existingProductIndex = cart.findIndex((item) => item.id === product.id);
-    if (existingProductIndex !== -1) {
-      const updatedCart = cart.map((item, index) =>
-        index === existingProductIndex
-          ? { ...item, quantity: item.quantity + 1 }
-          : item
-      );
-      setCart(updatedCart);
-      localStorage.setItem('cart', JSON.stringify(updatedCart));
-    } else {
-      const updatedCart = [...cart, { ...product, quantity: 1 }];
-      setCart(updatedCart);
-      localStorage.setItem('cart', JSON.stringify(updatedCart));
-    }
-  };
-
-  const removeFromCart = (productId) => {
-    console.log("productID", productId)
-    const updatedCart = cart.filter((item) => item.id !== productId);
-    setCart(updatedCart);
-    localStorage.setItem('cart', JSON.stringify(updatedCart));
-    console.log("CART", cart)
-  };
 
   const refreshData = async () => {
     try {
@@ -50,8 +27,54 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const clearCart = () => {
-    setCart([]);
+  const refreshCart = async () => {
+    try {
+      const response = await axios.get("/cart");
+      // Map backend structure (cart.items -> item.product + quantity) to frontend structure
+      const mappedCart = response.data.items.map(item => ({
+        ...item.product,
+        quantity: item.quantity
+      }));
+      setCart(mappedCart);
+    } catch (error) {
+      console.error("Error fetching cart:", error);
+    }
+  };
+
+  const addToCart = async (product) => {
+    try {
+      await axios.post(`/cart/add?productId=${product.id}&quantity=1`);
+      refreshCart();
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+    }
+  };
+
+  const removeFromCart = async (productId) => {
+    try {
+      await axios.delete(`/cart/remove/${productId}`);
+      refreshCart();
+    } catch (error) {
+      console.error("Error removing from cart:", error);
+    }
+  };
+
+  const updateQuantity = async (productId, quantity) => {
+    try {
+      await axios.put(`/cart/update/${productId}?quantity=${quantity}`);
+      refreshCart();
+    } catch (error) {
+      console.error("Error updating cart quantity:", error);
+    }
+  };
+
+  const clearCart = async () => {
+    try {
+      await axios.delete("/cart/clear");
+      setCart([]);
+    } catch (error) {
+      console.error("Error clearing cart:", error);
+    }
   };
 
   const toggleFavorite = async (productId) => {
@@ -70,11 +93,8 @@ export const AppProvider = ({ children }) => {
 
   useEffect(() => {
     refreshData();
+    refreshCart();
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cart));
-  }, [cart]);
 
   return (
     <AppContext.Provider
@@ -84,6 +104,7 @@ export const AppProvider = ({ children }) => {
         cart,
         addToCart,
         removeFromCart,
+        updateQuantity,
         refreshData,
         clearCart,
         toggleFavorite,
