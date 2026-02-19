@@ -24,8 +24,14 @@ import java.util.Objects;
 public class AIAssistantService {
 
     private static final Logger logger = LoggerFactory.getLogger(AIAssistantService.class);
+
+    // Spring AI ChatClient for abstracting LLM interactions
     private final ChatClient chatClient;
+
+    // List of available Groq models (loaded from JSON)
     private final List<String> availableModels = new ArrayList<>();
+
+    // Index to track current model for round-robin rotation on failure
     private int currentModelIndex = 0;
 
     public AIAssistantService(ChatClient.Builder chatClientBuilder,
@@ -39,11 +45,12 @@ public class AIAssistantService {
         String systemPrompt = """
                 You are a helpful AI assistant for an Ecommerce platform.
                 You have access to product search and data analysis tools.
-
+                You can search for products using the tool `searchProducts`.
                 Always use the provided tools to get accurate information about products,
                 stock levels, and user activity.
                 """;
 
+        // Initialize ChatClient with system prompt and registered tools
         this.chatClient = chatClientBuilder
                 .defaultSystem(systemPrompt)
                 .defaultToolCallbacks(toolCallbackProviders.toArray(new ToolCallbackProvider[0]))
@@ -52,6 +59,10 @@ public class AIAssistantService {
         loadAvailableModels();
     }
 
+    /**
+     * Loads available AI models from a JSON file (groq_models.json).
+     * This avoids hardcoding model names and allows dynamic updates.
+     */
     private void loadAvailableModels() {
         try {
             ClassPathResource resource = new ClassPathResource("groq_models.json");
@@ -62,7 +73,7 @@ public class AIAssistantService {
                 if (data != null && data.isArray()) {
                     for (JsonNode node : data) {
                         String modelId = node.get("id").asText();
-                        // Filter out audio models like whisper
+                        // Filter out audio models like whisper to keep only text chat models
                         if (modelId != null && !modelId.contains("whisper")) {
                             availableModels.add(modelId);
                         }
@@ -81,8 +92,13 @@ public class AIAssistantService {
     }
 
     /**
-     * Chat entry point used by controllers.
-     * Implements fallback logic for rate limits.
+     * Executes the chat request with automatic failover.
+     * If a model returns a Rate Limit error (429), it switches to the next
+     * available model.
+     * 
+     * @param userMessage The user's input
+     * @param model       The preferred model (ignored if we need to rotate)
+     * @return The AI response
      */
     public String chat(String userMessage, String model) {
         int maxRetries = availableModels.isEmpty() ? 1 : availableModels.size();
@@ -100,7 +116,8 @@ public class AIAssistantService {
                         .call()
                         .content();
             } catch (Exception e) {
-                // Check for rate limit error (429)
+                // Check for rate limit error (429) or related messages ("probation", "rate
+                // limit")
                 if (e.getMessage() != null
                         && (e.getMessage().contains("429") || e.getMessage().toLowerCase().contains("probation")
                                 || e.getMessage().toLowerCase().contains("rate limit"))) {
@@ -108,7 +125,7 @@ public class AIAssistantService {
                     rotateModel();
                     attempts++;
                 } else {
-                    // Rethrow other errors
+                    // Rethrow other errors (like Auth failures or Network issues)
                     throw e;
                 }
             }

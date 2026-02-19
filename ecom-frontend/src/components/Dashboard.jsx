@@ -110,7 +110,7 @@ const Dashboard = () => {
                                         </Link>
                                     </td>
                                     <td>{product.brand}</td>
-                                    <td>Rs {product.price}</td>
+                                    <td>₹ {product.price}</td>
                                     <td>{product.category}</td>
                                     <td style={{ minWidth: "150px" }}>
                                         <div className="input-group input-group-sm">

@@ -1,6 +1,7 @@
 import axios from "../axios";
 import { useState, useEffect, createContext } from "react";
 
+// Create the context with default values (for auto-completion/TS-like hints)
 const AppContext = createContext({
   data: [],
   isError: "",
@@ -10,7 +11,13 @@ const AppContext = createContext({
   updateQuantity: (productId, quantity) => { },
   toggleFavorite: (productId) => { },
   clearCart: () => { },
+  refreshData: () => { },
 });
+
+/**
+ * Global Provider Component.
+ * Wraps the application to provide shared state (Products, Cart) to all components.
+ */
 
 export const AppProvider = ({ children }) => {
   const [data, setData] = useState([]);
@@ -18,6 +25,10 @@ export const AppProvider = ({ children }) => {
   const [cart, setCart] = useState([]);
 
 
+  /**
+   * Fetches the latest product list from the backend.
+   * Called on mount and after updates (add/delete product).
+   */
   const refreshData = async () => {
     try {
       const response = await axios.get("/products");
@@ -27,6 +38,10 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  /**
+   * Fetches the current user's cart.
+   * Maps the backend's nested structure to a flatter frontend-friendly format.
+   */
   const refreshCart = async () => {
     try {
       const response = await axios.get("/cart");

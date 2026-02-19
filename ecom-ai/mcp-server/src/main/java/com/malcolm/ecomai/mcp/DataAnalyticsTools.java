@@ -28,16 +28,24 @@ public class DataAnalyticsTools {
         // Mock implementation since the backend doesn't have an activity API yet
         // In a real scenario, this would call backendClient.getUserActivity(userId,
         // startDate, endDate)
+        // This helps the AI demonstrate its ability to aggregate "user data"
         return new UserActivitySummary(userId, 5, 100);
     }
 
+    /**
+     * Tool: getCurrentTime
+     * Helps the AI understand "now" or relative dates (e.g., "is the sale still
+     * on?").
+     */
     @Tool(description = "Get current system time. Optional: provide a format like 'yyyy-MM-dd HH:mm:ss'")
     public String getCurrentTime(String format) {
         try {
+            // Default to standard format if nothing valid is provided
             String pattern = (format == null || format.isBlank() || format.equals("format")) ? "yyyy-MM-dd HH:mm:ss"
                     : format;
             return LocalDateTime.now().format(DateTimeFormatter.ofPattern(pattern));
         } catch (Exception e) {
+            // Fallback for invalid format strings to prevent crashes
             return LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
                     + " (Note: fall back to default as there was an issue with format '" + format + "': "
                     + e.getMessage() + ")";

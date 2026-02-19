@@ -1,4 +1,4 @@
-$logPath = "D:\Malcolm\DSCE\Internship\SENSEI\ecommerce\Logs"
+$logPath = Join-Path $PSScriptRoot "Logs"
 $files = @(
     "$logPath\spring_backend.log",
     "$logPath\react_frontend.log",

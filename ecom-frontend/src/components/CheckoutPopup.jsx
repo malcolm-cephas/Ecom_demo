@@ -17,12 +17,12 @@ const CheckoutPopup = ({ show, handleClose, cartItems, totalPrice, handleCheckou
                 <div>
                   <b><p>{item.name}</p></b>
                   <p>Quantity: {item.quantity}</p>
-                  <p>Price: Rs {item.price * item.quantity}</p>
+                  <p>Price: ₹ {item.price * item.quantity}</p>
                 </div>
               </div>
             ))}
             <div className="total" >
-              <h5>Total: Rs {totalPrice}</h5>
+              <h5>Total: ₹ {totalPrice}</h5>
             </div>
           </div>
         </Modal.Body>

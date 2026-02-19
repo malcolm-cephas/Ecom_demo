@@ -11,6 +11,19 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class McpClientApplication {
 
     public static void main(String[] args) {
+        // Load .env variables into System properties so Spring Boot can see them
+        try {
+            io.github.cdimascio.dotenv.Dotenv dotenv = io.github.cdimascio.dotenv.Dotenv.configure()
+                    .ignoreIfMissing()
+                    .load();
+
+            dotenv.entries().forEach(entry -> {
+                System.setProperty(entry.getKey(), entry.getValue());
+            });
+        } catch (Exception e) {
+            System.err.println("Warning: Could not load .env file in mcp-client.");
+        }
+
         SpringApplication.run(McpClientApplication.class, args);
     }
 

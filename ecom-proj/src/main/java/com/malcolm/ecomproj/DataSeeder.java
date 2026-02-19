@@ -47,11 +47,18 @@ public class DataSeeder implements CommandLineRunner {
         try (Connection conn = dataSource.getConnection();
                 Statement stmt = conn.createStatement()) {
 
-            // Check if products already exist to avoid duplicate seeding
+            // Optional: Force a refresh if a specific property is set
+            boolean forceRefresh = Boolean.getBoolean("app.db.refresh");
+
+            // Check if products already exist
             try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM product")) {
                 if (rs.next()) {
                     int count = rs.getInt(1);
-                    if (count == 0) {
+                    if (count == 0 || forceRefresh) {
+                        if (forceRefresh) {
+                            log.info("Force refreshing database...");
+                            stmt.executeUpdate("DELETE FROM product");
+                        }
                         // Load the initial SQL script from resources
                         Resource resource = new ClassPathResource("data.sql");
                         if (resource.exists()) {

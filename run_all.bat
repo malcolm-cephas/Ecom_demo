@@ -13,7 +13,7 @@ type nul > "D:\Malcolm\DSCE\Internship\SENSEI\ecommerce\Logs\mcp_client.log"
 
 :: 1. Start Core Backend API (ecom-proj) on Port 8080
 echo [1/4] Starting Core Backend (Hub)...
-start "Core Backend (Port 8080)" powershell -NoExit -Command "cd 'ecom-proj'; .\mvnw.cmd spring-boot:run 2>&1 | Tee-Object -FilePath 'D:\Malcolm\DSCE\Internship\SENSEI\ecommerce\Logs\spring_backend.log'"
+start "Core Backend (Port 8080)" powershell -NoExit -Command "cd 'ecom-proj'; .\mvnw.cmd spring-boot:run '-Dspring-boot.run.jvmArguments=-Dapp.db.refresh=true' 2>&1 | Tee-Object -FilePath 'D:\Malcolm\DSCE\Internship\SENSEI\ecommerce\Logs\spring_backend.log'"
 echo Waiting for Core Backend to initialize...
 timeout /t 20 /nobreak > nul
 

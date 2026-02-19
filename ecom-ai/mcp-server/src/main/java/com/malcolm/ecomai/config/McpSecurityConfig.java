@@ -19,6 +19,11 @@ import org.springframework.web.filter.CommonsRequestLoggingFilter;
 @EnableWebSecurity
 public class McpSecurityConfig {
 
+    /**
+     * Creates a logging filter to capture incoming HTTP requests.
+     * Useful for debugging MCP protocol messages.
+     */
+
     @Bean
     public FilterRegistrationBean<CommonsRequestLoggingFilter> requestLoggingFilter() {
         CommonsRequestLoggingFilter loggingFilter = new CommonsRequestLoggingFilter();
@@ -32,21 +37,35 @@ public class McpSecurityConfig {
         return bean;
     }
 
+    /**
+     * Configures the security filter chain.
+     * Currently allows all requests (permitAll) for easy local development.
+     * In production, you would strip this out or enforce authentication.
+     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
-                .csrf(AbstractHttpConfigurer::disable)
+                .csrf(AbstractHttpConfigurer::disable) // CSRF disabled for API usage
                 .authorizeHttpRequests(auth -> auth
-                        .anyRequest().authenticated())
-                .httpBasic(Customizer.withDefaults())
+                        .anyRequest().permitAll()) // Allow all requests for local dev
                 .build();
     }
 
+    /**
+     * Defines in-memory users for basic authentication (if enabled).
+     * Currently unused due to permitAll() but ready for enabling security.
+     */
     @Bean
     public UserDetailsService userDetailsService() {
         UserDetails user = User.builder()
-                .username("client-01")
-                .password("{noop}YOUR_SECRET_KEY")
+                .username(System.getenv("MCP_CLIENT_USER") != null ? System.getenv("MCP_CLIENT_USER") : "client-01")
+                .password("{noop}"
+                        + (System.getenv("MCP_API_KEY") != null ? System.getenv("MCP_API_KEY") : "ecom-secret-key-123")) // {noop}
+                                                                                                                         // means
+                                                                                                                         // plain
+                                                                                                                         // text
+                                                                                                                         // (dev
+                                                                                                                         // only)
                 .roles("USER")
                 .build();
         return new InMemoryUserDetailsManager(user);

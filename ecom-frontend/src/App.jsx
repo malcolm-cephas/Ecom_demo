@@ -14,11 +14,18 @@ import Dashboard from "./components/Dashboard"; // Import Dashboard
 import "bootstrap/dist/css/bootstrap.min.css"; // Global styles
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { ToastProvider } from "./Context/ToastContext"; // UI notifications
+import ChatBox from "./components/ChatBox"; // Import ChatBox
 
 function App() {
   // State to track which product category the user has selected in the Navbar
+  // This state is passed down to the Home component to filter products
   const [selectedCategory, setSelectedCategory] = useState("");
 
+  /**
+   * Handler for when a category is selected in the Navbar.
+   * Updates the state to trigger a re-render of the product list.
+   * @param {string} category - The selected category name
+   */
   const handleCategorySelect = (category) => {
     setSelectedCategory(category);
     console.log("Category changed to:", category);
@@ -29,6 +36,7 @@ function App() {
       <ToastProvider>
         <BrowserRouter>
           {/* Navigation bar remains visible on all pages */}
+          {/* It receives the handler to update the selected category */}
           <Navbar onSelectCategory={handleCategorySelect} />
 
           {/* Define the page routing for the application */}
@@ -36,6 +44,7 @@ function App() {
             <Route
               path="/"
               element={
+                /* Home page receives the selected category to filter products */
                 <Home selectedCategory={selectedCategory} />
               }
             />
@@ -47,6 +56,9 @@ function App() {
             <Route path="/product/update/:id" element={<UpdateProduct />} />
             <Route path="/dashboard" element={<Dashboard />} />
           </Routes>
+
+          {/* AI ChatBox: Floating chat interface available globally */}
+          <ChatBox />
         </BrowserRouter>
       </ToastProvider>
     </AppProvider>

@@ -89,7 +89,7 @@ const Product = () => {
           </div>
 
           <div className="product-price">
-            <span>{"Rs " + product.price}</span>
+            <span>{"₹" + product.price}</span>
             <button
               className={`cart-btn ${!product.available ? "disabled-btn" : ""
                 }`}

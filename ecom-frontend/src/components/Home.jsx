@@ -24,6 +24,7 @@ const Home = ({ selectedCategory }) => {
   const productsPerPage = 9;
 
   // Fetch products whenever the category or page changes
+  // This effect handles both browsing all products and filtering by category/search
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
@@ -31,7 +32,8 @@ const Home = ({ selectedCategory }) => {
         // Construct the URL based on whether a category filter is active
         let url = `/products/page?page=${currentPage - 1}&size=${productsPerPage}`;
         if (selectedCategory) {
-          // Use search endpoint as a proxy for category filtering
+          // Use search endpoint as a proxy for category filtering if a category is selected
+          // Note: Pagination indices are 0-based in backend but 1-based in frontend state
           url = `/products/search/page?keyword=${selectedCategory}&page=${currentPage - 1}&size=${productsPerPage}`;
         }
 
@@ -166,7 +168,7 @@ const Home = ({ selectedCategory }) => {
                           </h5>
                         </div>
                         <div className="mt-3">
-                          <h5 className="fw-bold mb-3">{"Rs " + price}</h5>
+                          <h5 className="fw-bold mb-3">{"₹" + price}</h5>
                           <button
                             className="btn btn-primary w-100 py-2 shadow-sm"
                             onClick={(e) => {

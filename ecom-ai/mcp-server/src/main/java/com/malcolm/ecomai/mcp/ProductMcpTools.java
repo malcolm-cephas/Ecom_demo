@@ -18,9 +18,11 @@ import java.util.stream.Collectors;
 @Component
 public class ProductMcpTools {
 
+    // Client to fetch data from the actual E-commerce backend
     @Autowired
     private BackendClient backendClient;
 
+    // DTO to expose only relevant product fields to the AI, keeping context small
     public record ProductInfo(
             int id,
             String name,
@@ -48,7 +50,14 @@ public class ProductMcpTools {
                 product.isFavorite());
     }
 
-    @Tool(description = "Search for products by a keyword or phrase")
+    /**
+     * Tool: searchProducts
+     * Allows the AI to find products based on natural language queries.
+     * 
+     * @param keyword The search string
+     * @return List of simplified product info
+     */
+    @Tool(name = "searchProducts", description = "Search for products by a keyword or phrase")
     public List<ProductInfo> searchProducts(String keyword) {
         return backendClient.searchProducts(keyword)
                 .stream()
@@ -83,12 +92,20 @@ public class ProductMcpTools {
         }
     }
 
+    /**
+     * Tool: checkStock
+     * Returns a human-readable string about stock levels.
+     * The AI uses this to answer "do you have the iPhone 15 in stock?"
+     */
     @Tool(description = "Check stock availability for a product by name. Returns the available quantity.")
     public String checkStock(String productName) {
-        List<Product> products = backendClient.searchProducts(productName);
+        // Try exact match first, then fallback to removing spaces
+        List<Product> products = searchProductsWithFallback(productName);
         if (products.isEmpty()) {
             return "Product not found: " + productName;
         }
+
+        // Build a report for multiple matches
         StringBuilder sb = new StringBuilder();
         for (Product product : products) {
             sb.append(String.format("Product: %s (ID: %d) - Stock: %d\n", product.getName(), product.getId(),
@@ -106,7 +123,7 @@ public class ProductMcpTools {
             return "FAILURE: Quantity must be a valid number.";
         }
 
-        List<Product> products = backendClient.searchProducts(productName);
+        List<Product> products = searchProductsWithFallback(productName);
         if (products.isEmpty()) {
             return "Product not found: " + productName;
         }
@@ -126,5 +143,30 @@ public class ProductMcpTools {
             return String.format("FAILURE: Insufficient stock for %s. Requested: %d, Available: %d", product.getName(),
                     quantityInt, product.getStockQuantity());
         }
+    }
+
+    private List<Product> searchProductsWithFallback(String keyword) {
+        List<Product> products = backendClient.searchProducts(keyword);
+        if (products.isEmpty() && keyword.contains(" ")) {
+            String fallbackKeyword = keyword.replace(" ", "");
+            products = backendClient.searchProducts(fallbackKeyword);
+        }
+        return products;
+    }
+
+    /**
+     * Tool: getStorePolicies
+     * Provides a static knowledge base of store policies (static RAG).
+     */
+    @Tool(description = "Get the store policies regarding shipping, returns, and warranties")
+    public String getStorePolicies() {
+        return """
+                Ecommerce Store Policies:
+                - Returns: 30-day window for most electronics/clothing. Must be in original packaging.
+                - Shipping: Standard (3-5 days) is ₹500. Free for orders over ₹5000.
+                - Warranty: 1-year limited manufacturer warranty on all major electronics.
+                - Restocking Fee: 10% for opened electronics (e.g., phones, laptops).
+                - Currency: All prices are in Indian Rupees (₹).
+                """;
     }
 }

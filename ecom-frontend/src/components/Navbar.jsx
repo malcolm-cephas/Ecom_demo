@@ -17,12 +17,15 @@ const Navbar = ({ onSelectCategory, onSearch }) => {
   const [searchFocused, setSearchFocused] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false)
 
+  // Debounce the search input to avoid making API calls on every keystroke.
+  // Waits for 300ms of inactivity before firing the search request.
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       if (input.length >= 1) {
         setShowSearchResults(true);
         searchProducts(input);
       } else {
+        // Clear results if input is empty
         setShowSearchResults(false);
         setSearchResults([]);
         setNoResults(false);
@@ -49,12 +52,13 @@ const Navbar = ({ onSelectCategory, onSearch }) => {
   };
   const handleCategorySelect = (category) => {
     setSelectedCategory(category);
-    onSelectCategory(category);
+    onSelectCategory(category); // Notify parent (App.jsx) to update the Home view
   };
+
   const toggleTheme = () => {
     const newTheme = theme === "dark-theme" ? "light-theme" : "dark-theme";
     setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
+    localStorage.setItem("theme", newTheme); // Persist theme preference
   };
 
   useEffect(() => {

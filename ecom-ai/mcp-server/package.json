@@ -1,12 +1,14 @@
-﻿{
+{
     "name": "mcp-bridge",
     "version": "1.0.0",
-    "description": "Bridge between Claude Desktop stdio and HTTP/SSE MCP server",
+    "description": "Bridge for MCP server",
     "main": "mcp-bridge.js",
     "scripts": {
         "start": "node mcp-bridge.js"
     },
     "dependencies": {
+        "@modelcontextprotocol/sdk": "^0.6.0",
+        "axios": "^1.13.5",
         "eventsource": "^2.0.2"
     }
 }

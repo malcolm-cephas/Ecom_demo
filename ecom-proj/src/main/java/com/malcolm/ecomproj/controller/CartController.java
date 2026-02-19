@@ -1,7 +1,6 @@
 package com.malcolm.ecomproj.controller;
 
 import com.malcolm.ecomproj.model.Cart;
-import com.malcolm.ecomproj.model.CartItem;
 import com.malcolm.ecomproj.service.CartService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

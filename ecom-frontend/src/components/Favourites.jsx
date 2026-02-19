@@ -75,7 +75,7 @@ const Favourites = () => {
                                                 </h5>
                                             </div>
                                             <div className="mt-3">
-                                                <h5 className="fw-bold mb-3">{"Rs " + price}</h5>
+                                                <h5 className="fw-bold mb-3">{"₹" + price}</h5>
                                                 <button
                                                     className="btn btn-primary w-100 py-2 shadow-sm"
                                                     onClick={(e) => {
