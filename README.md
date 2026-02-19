@@ -25,11 +25,11 @@ graph TD
 
     subgraph Core_Layer [Data & Business Logic]
         SB[Spring Boot Backend]
-        DB[(MySQL Database)]
+        DB[("MySQL Database")]
     end
 
     subgraph External_Services [External Cloud]
-        Groq[Groq API (LLM)]
+        Groq["Groq API (LLM)"]
     end
 
     %% Connections
