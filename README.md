@@ -25,19 +25,30 @@ graph TD
 
     subgraph Core_Layer [Data & Business Logic]
         SB[Spring Boot Backend]
+        DB[(MySQL Database)]
+    end
+
+    subgraph External_Services [External Cloud]
+        Groq[Groq API (LLM)]
     end
 
     %% Connections
-    React -- REST --> SB
-    MCP_Server -- REST --> SB
-    MCP_Client -- MCP --> MCP_Server
-    Claude -- MCP --> MCP_Server
+    React -- REST API --> SB
+    MCP_Server -- REST API --> SB
+    SB -- SQL --> DB
+    
+    MCP_Client -- SSE / Basic Auth --> MCP_Server
+    Claude -- SSE / Bridge --> MCP_Server
+    
+    MCP_Client -- HTTPS / JSON --> Groq
     Tools --> MCP_Client
 
     %% Styling
     style SB fill:#1e293b,stroke:#38bdf8,stroke-width:4px,color:#fff
     style MCP_Server fill:#1e293b,stroke:#10b981,stroke-width:2px,color:#fff
     style React fill:#1e293b,stroke:#64748b,stroke-width:2px,color:#fff
+    style Groq fill:#f59e0b,stroke:#fcd34d,stroke-width:2px,color:#fff
+    style DB fill:#334155,stroke:#94a3b8,stroke-width:2px,color:#fff
 ```
 
 ### 🔄 How It Works
