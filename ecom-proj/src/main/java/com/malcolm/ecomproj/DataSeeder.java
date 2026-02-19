@@ -83,7 +83,14 @@ public class DataSeeder implements CommandLineRunner {
      */
     private void loadImages() {
         // Path to the external directory containing product images
-        String imageDirectoryPath = "D:\\Malcolm\\DSCE\\Internship\\SENSEI\\ecom image";
+        // We look for "ecom image" in the parent directory (project root) or current
+        // directory
+        String userDir = System.getProperty("user.dir");
+        File imageDir = new File(userDir, "../ecom image");
+        if (!imageDir.exists()) {
+            imageDir = new File(userDir, "ecom image");
+        }
+        String imageDirectoryPath = imageDir.getAbsolutePath();
 
         try {
             List<Product> products = repo.findAll();
