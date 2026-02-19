@@ -30,7 +30,13 @@ spring.ai.openai.chat.options.model=llama-3.3-70b-versatile
 spring.ai.mcp.client.sse.connections.mcp-server.url=http://localhost:9091/sse
 ```
 
-### 2. Model Configuration
+### 2. MCP Authentication (Optional)
+The client connects to the MCP Server using Basic Auth.
+- **Default User**: `client-01`
+- **Default Key**: `ecom-secret-key-123`
+- **Override**: Set `MCP_CLIENT_USER` and `MCP_API_KEY` environment variables.
+
+### 3. Model Configuration
 Available models are defined in `src/main/resources/groq_models.json`. The system will:
 - Load all non-audio models on startup (18 models total)
 - Start with the first model in the list

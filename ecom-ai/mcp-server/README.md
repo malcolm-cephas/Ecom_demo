@@ -7,7 +7,7 @@ This module acts as the **Resource Provider** in the MCP architecture. It hosts 
 1.  **MCP Tool Provider**: Exposes standardized tools (like `searchProducts`, `getProductDetails`, `listAllProducts`) via the **Model Context Protocol (MCP)**.
 2.  **Resource Host**: Manages the product inventory and data analytics database.
 3.  **SSE Endpoint**: Provides a Server-Sent Events (SSE) stream at `http://localhost:9091/sse` for clients to connect and discover tools.
-4.  **Secured Access**: Protected by **HTTP Basic Authentication** (`client-01:ecom-secret-key-123`).
+4.  **Secured Access**: Configured for **HTTP Basic Authentication**. Default credentials (`client-01` / `ecom-secret-key-123`) can be overridden via `MCP_CLIENT_USER` and `MCP_API_KEY` environment variables.
 5.  **Request Logging**: All incoming requests are logged with `[MCP-SERVER-REQUEST]` prefix, including detailed header tracing.
 
 ## 🛠️ Technology Stack
