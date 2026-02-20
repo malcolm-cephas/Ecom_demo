@@ -47,7 +47,8 @@ public class McpSecurityConfig {
         return http
                 .csrf(AbstractHttpConfigurer::disable) // CSRF disabled for API usage
                 .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll()) // Allow all requests for local dev
+                        .anyRequest().authenticated()) // Require authentication for all requests
+                .httpBasic(Customizer.withDefaults()) // Enable HTTP Basic Auth
                 .build();
     }
 

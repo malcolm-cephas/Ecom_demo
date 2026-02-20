@@ -9,7 +9,7 @@ if not exist "%~dp0Logs" mkdir "%~dp0Logs"
 type nul > "%~dp0Logs\react_frontend.log"
 type nul > "%~dp0Logs\spring_backend.log"
 type nul > "%~dp0Logs\mcp_server.log"
-type nul > "%~dp0Logs\mcp_client.log"
+type nul > "%~dp0Logs\mcp_client.log"   
 
 :: 1. Start Core Backend API (ecom-proj) on Port 8080
 echo [1/4] Starting Core Backend (Hub)...

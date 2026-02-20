@@ -28,6 +28,11 @@ const ChatBox = () => {
 
     const messagesEndRef = useRef(null); // Used for auto-scrolling to bottom
 
+    /**
+     * Toggles the visibility of the chat window and fetches the list of available
+     * MCP prompts from the backend if the chat window is opened and the list is
+     * empty.
+     */
     const toggleChat = () => {
         setIsOpen(!isOpen);
         if (!isOpen && prompts.length === 0) {
