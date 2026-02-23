@@ -9,13 +9,13 @@ const API = axios.create({
 });
 
 
-// Explicitly ensure no Authorization header is sent by default unless needed
-delete API.defaults.headers.common["Authorization"];
-
-// Add a request interceptor to log outgoing requests
-// Useful for debugging what data is being sent to the server
+// Add a request interceptor to inject the JWT token if available and log requests
 API.interceptors.request.use(
   (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     console.log(`[Frontend Request] ${config.method.toUpperCase()} ${config.url}`, config.data || "");
     return config;
   },

@@ -2,9 +2,11 @@ import React, { useEffect, useState, useContext } from "react";
 import axios from "../axios";
 import { CATEGORIES } from "../constants";
 import AppContext from "../Context/Context";
+import { useAuth } from "../Context/AuthContext";
 
 const Navbar = ({ onSelectCategory, onSearch }) => {
   const { cart } = useContext(AppContext);
+  const { user, logout } = useAuth();
   const getInitialTheme = () => {
     const storedTheme = localStorage.getItem("theme");
     return storedTheme ? storedTheme : "light-theme";
@@ -96,11 +98,6 @@ const Navbar = ({ onSelectCategory, onSearch }) => {
                   </a>
                 </li>
                 <li className="nav-item">
-                  <a className="nav-link" href="/add_product">
-                    Add Product
-                  </a>
-                </li>
-                <li className="nav-item">
                   <a className="nav-link" href="/favourites">
                     Favourites
                   </a>
@@ -139,6 +136,28 @@ const Navbar = ({ onSelectCategory, onSearch }) => {
                     ))}
                   </ul>
                 </li>
+
+                {user ? (
+                  <>
+                    <li className="nav-item">
+                      <a className="nav-link" href="/add_product">
+                        Add Product
+                      </a>
+                    </li>
+                    <li className="nav-item dropdown">
+                      <a className="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        Hi, {user.username}
+                      </a>
+                      <ul className="dropdown-menu">
+                        <li><button className="dropdown-item" onClick={logout}>Logout</button></li>
+                      </ul>
+                    </li>
+                  </>
+                ) : (
+                  <li className="nav-item">
+                    <a className="nav-link" href="/login">Login</a>
+                  </li>
+                )}
 
                 <li className="nav-item"></li>
               </ul>
@@ -205,7 +224,7 @@ const Navbar = ({ onSelectCategory, onSearch }) => {
             </div>
           </div>
         </nav>
-      </header>
+      </header >
     </>
   );
 };

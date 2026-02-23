@@ -15,6 +15,10 @@ import "bootstrap/dist/css/bootstrap.min.css"; // Global styles
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { ToastProvider } from "./Context/ToastContext"; // UI notifications
 import ChatBox from "./components/ChatBox"; // Import ChatBox
+import { AuthProvider } from "./Context/AuthContext";
+import Login from "./components/Login";
+import Register from "./components/Register";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   // State to track which product category the user has selected in the Navbar
@@ -32,36 +36,47 @@ function App() {
   };
 
   return (
-    <AppProvider>
-      <ToastProvider>
-        <BrowserRouter>
-          {/* Navigation bar remains visible on all pages */}
-          {/* It receives the handler to update the selected category */}
-          <Navbar onSelectCategory={handleCategorySelect} />
+    <AuthProvider>
+      <AppProvider>
+        <ToastProvider>
+          <BrowserRouter>
+            {/* Navigation bar remains visible on all pages */}
+            {/* It receives the handler to update the selected category */}
+            <Navbar onSelectCategory={handleCategorySelect} />
 
-          {/* Define the page routing for the application */}
-          <Routes>
-            <Route
-              path="/"
-              element={
-                /* Home page receives the selected category to filter products */
-                <Home selectedCategory={selectedCategory} />
-              }
-            />
-            <Route path="/add_product" element={<AddProduct />} />
-            <Route path="/product" element={<Product />} />
-            <Route path="product/:id" element={<Product />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/favourites" element={<Favourites />} />
-            <Route path="/product/update/:id" element={<UpdateProduct />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-          </Routes>
+            {/* Define the page routing for the application */}
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  /* Home page receives the selected category to filter products */
+                  <Home selectedCategory={selectedCategory} />
+                }
+              />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route
+                path="/add_product"
+                element={
+                  <ProtectedRoute>
+                    <AddProduct />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/product" element={<Product />} />
+              <Route path="product/:id" element={<Product />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/favourites" element={<Favourites />} />
+              <Route path="/product/update/:id" element={<UpdateProduct />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+            </Routes>
 
-          {/* AI ChatBox: Floating chat interface available globally */}
-          <ChatBox />
-        </BrowserRouter>
-      </ToastProvider>
-    </AppProvider>
+            {/* AI ChatBox: Floating chat interface available globally */}
+            <ChatBox />
+          </BrowserRouter>
+        </ToastProvider>
+      </AppProvider>
+    </AuthProvider>
   );
 }
 

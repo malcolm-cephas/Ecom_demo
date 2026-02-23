@@ -39,3 +39,7 @@ Thumbs.db
 *.bak
 *.secret
 *.bk
+
+# Temp / Build Logs
+*.txt
+git_status_output.txt
