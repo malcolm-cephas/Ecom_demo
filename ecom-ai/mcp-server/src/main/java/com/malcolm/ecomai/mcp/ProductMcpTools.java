@@ -61,6 +61,7 @@ public class ProductMcpTools {
     public List<ProductInfo> searchProducts(String keyword) {
         return backendClient.searchProducts(keyword)
                 .stream()
+                .limit(2) // Temporary limit for debugging
                 .map(this::mapToInfo)
                 .collect(Collectors.toList());
     }
@@ -78,6 +79,7 @@ public class ProductMcpTools {
     public List<ProductInfo> listAllProducts() {
         return backendClient.getAllProducts()
                 .stream()
+                .limit(5)
                 .map(this::mapToInfo)
                 .collect(Collectors.toList());
     }

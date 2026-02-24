@@ -4,9 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 
-// Force SSL bypass
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-
 const LOG_FILE = path.join(__dirname, 'mcp_bridge.log');
 const BASE_URL = 'https://mcp-server-production-b3d5.up.railway.app';
 const SSE_URL = `${BASE_URL}/sse`;
@@ -16,7 +14,7 @@ function log(msg) {
     fs.appendFileSync(LOG_FILE, `[${ts}] ${msg}\n`);
 }
 
-log(`--- MCP Bridge v12 (Zero-Latency) Starting ---`);
+log(`--- MCP Bridge v13 (Large Payload Fix) Starting ---`);
 
 let messageEndpoint = null;
 let requestBuffer = [];
@@ -45,14 +43,21 @@ function connect() {
     eventSource.onmessage = (event) => {
         if (!event.data || !event.data.trim()) return;
         try {
-            const msg = JSON.parse(event.data);
-            if (msg.jsonrpc) {
-                // High-speed write
-                process.stdout.write(JSON.stringify(msg) + '\n');
-                log(`<<< RECV: ${msg.id}`);
+            const dataStr = event.data.trim();
+            // Verify if it's a complete JSON-RPC message
+            if (dataStr.startsWith('{') && dataStr.endsWith('}')) {
+                const message = JSON.parse(dataStr);
+                if (message.jsonrpc) {
+                    // Force synchronous write to stdout to avoid buffering
+                    const output = JSON.stringify(message) + '\n';
+                    fs.writeSync(1, output);
+                    log(`<<< [RECV] ID: ${message.id} (Size: ${output.length} bytes)`);
+                }
+            } else {
+                log(`!!! Incomplete data: ${dataStr.substring(0, 50)}...`);
             }
         } catch (e) {
-            log(`!!! Parse Error: ${e.message}`);
+            log(`!!! Parse Fail: ${e.message} | Data snippet: ${event.data.substring(0, 50)}`);
         }
     };
 
@@ -75,19 +80,18 @@ async function send(req) {
         return;
     }
     try {
-        log(`>>> SEND: ${req.method} (${req.id})`);
+        log(`>>> [SEND] ${req.method} (${req.id})`);
         await axios.post(messageEndpoint, req, {
             headers: { 'Content-Type': 'application/json' },
             httpsAgent: agent,
             timeout: 60000
         });
-        log(`>>> SENT: OK`);
+        log(`>>> [SENT] OK`);
     } catch (err) {
         log(`!!! POST FAIL: ${err.message}`);
     }
 }
 
-// Low-level fast stdin reader
 let buf = '';
 process.stdin.on('data', (chunk) => {
     buf += chunk.toString();
@@ -98,13 +102,11 @@ process.stdin.on('data', (chunk) => {
         if (line) {
             try {
                 send(JSON.parse(line));
-            } catch (e) {
-                log(`!!! Stdin JSON Error: ${e.message}`);
-            }
+            } catch (e) { }
         }
     }
 });
 
 connect();
 process.stdin.resume();
-log('Bridge Ready.');
+log('Bridge v13 ready.');
