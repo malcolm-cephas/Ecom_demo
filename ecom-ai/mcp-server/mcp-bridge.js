@@ -1,123 +1,110 @@
 const axios = require('axios');
 const EventSource = require('eventsource');
-const readline = require('readline');
 const fs = require('fs');
 const path = require('path');
+const https = require('https');
+
+// Force SSL bypass
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 const LOG_FILE = path.join(__dirname, 'mcp_bridge.log');
-
-// Helper to log errors
-function log(msg) {
-    const timestamp = new Date().toISOString();
-    const formatted = `[${timestamp}] ${msg}\n`;
-    fs.appendFileSync(LOG_FILE, formatted);
-    console.error(formatted);
-}
-
-// Connection Configuration
-const BASE_URL = 'http://localhost:9091';
+const BASE_URL = 'https://mcp-server-production-b3d5.up.railway.app';
 const SSE_URL = `${BASE_URL}/sse`;
 
-log(`Starting MCP Bridge`);
-log(`SSE URL: ${SSE_URL}`);
+function log(msg) {
+    const ts = new Date().toISOString();
+    fs.appendFileSync(LOG_FILE, `[${ts}] ${msg}\n`);
+}
 
-// Store the session-specific endpoint URL (received after handshake)
+log(`--- MCP Bridge v12 (Zero-Latency) Starting ---`);
+
 let messageEndpoint = null;
-// Buffer requests if they come before the handshake is complete
 let requestBuffer = [];
+let eventSource = null;
 
-// Connect to the Spring Boot App via SSE (Server-Sent Events)
-log('Attempting to connect to SSE stream...');
-const eventSource = new EventSource(SSE_URL);
-
-eventSource.onopen = () => {
-    log('Connected to SSE server');
-};
-
-// Handle incoming messages from the Spring Server
-eventSource.onmessage = (event) => {
-    // This handles the DEFAULT "message" event type from SSE
-    try {
-        const message = JSON.parse(event.data);
-        // If the message is a JSON-RPC response/request intended for Claude
-        if (message.jsonrpc) {
-            // Forward it to Standard Output (stdout). 
-            // This is how we "talk" to Claude Desktop.
-            process.stdout.write(JSON.stringify(message) + '\n');
-            log(`Sent to Claude: ${JSON.stringify(message).substring(0, 100)}...`);
-        }
-    } catch (e) {
-        log(`Failed to parse SSE message: ${e.message}`);
-    }
-};
-
-// Listen for the 'endpoint' event which contains the session-specific URL
-// Listen for the 'endpoint' event. 
-// The Spring MCP server sends this special event to tell us where to POST data.
-eventSource.addEventListener('endpoint', (event) => {
-    const endpointPath = event.data.trim();
-    messageEndpoint = `${BASE_URL}${endpointPath}`;
-    log(`Received session endpoint: ${messageEndpoint}`);
-
-    // If we had queued requests waiting for this handshake, send them now
-    if (requestBuffer.length > 0) {
-        log(`Processing ${requestBuffer.length} buffered requests...`);
-        while (requestBuffer.length > 0) {
-            const req = requestBuffer.shift();
-            sendRequest(req);
-        }
-    }
+const agent = new https.Agent({
+    rejectUnauthorized: false,
+    keepAlive: true,
+    maxSockets: 100
 });
 
-eventSource.onerror = (err) => {
-    // Basic error logging
-    if (err) {
-        log(`SSE Error: ${JSON.stringify(err)}`);
-    }
-};
+function connect() {
+    log(`Connecting to: ${SSE_URL}`);
+    if (eventSource) eventSource.close();
 
-// Function to send POST request
-async function sendRequest(request) {
+    eventSource = new EventSource(SSE_URL, {
+        https: { rejectUnauthorized: false },
+        headers: {
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no'
+        }
+    });
+
+    eventSource.onopen = () => log('Stream Active.');
+
+    eventSource.onmessage = (event) => {
+        if (!event.data || !event.data.trim()) return;
+        try {
+            const msg = JSON.parse(event.data);
+            if (msg.jsonrpc) {
+                // High-speed write
+                process.stdout.write(JSON.stringify(msg) + '\n');
+                log(`<<< RECV: ${msg.id}`);
+            }
+        } catch (e) {
+            log(`!!! Parse Error: ${e.message}`);
+        }
+    };
+
+    eventSource.addEventListener('endpoint', (event) => {
+        messageEndpoint = `${BASE_URL}${event.data.trim()}`;
+        log(`### Endpoint Linked: ${messageEndpoint}`);
+        while (requestBuffer.length > 0) send(requestBuffer.shift());
+    });
+
+    eventSource.onerror = (err) => {
+        log(`!!! SSE Error: ${err.message || 'Signal Lost'}`);
+        messageEndpoint = null;
+    };
+}
+
+async function send(req) {
     if (!messageEndpoint) {
-        log(`Buffering request: ${request.method} (ID: ${request.id}) - Waiting for endpoint`);
-        requestBuffer.push(request);
+        log(`Queue: ${req.method} (${req.id})`);
+        requestBuffer.push(req);
         return;
     }
-
     try {
-        log(`Sending POST to ${messageEndpoint}`);
-        await axios.post(messageEndpoint, request, {
-            headers: { 'Content-Type': 'application/json' }
+        log(`>>> SEND: ${req.method} (${req.id})`);
+        await axios.post(messageEndpoint, req, {
+            headers: { 'Content-Type': 'application/json' },
+            httpsAgent: agent,
+            timeout: 60000
         });
-        log(`Forwarded request to server successfully.`);
-    } catch (httpError) {
-        log(`HTTP Error posting to server: ${httpError.message}`);
-        if (httpError.response) {
-            log(`Response Data: ${JSON.stringify(httpError.response.data)}`);
-        }
+        log(`>>> SENT: OK`);
+    } catch (err) {
+        log(`!!! POST FAIL: ${err.message}`);
     }
 }
 
-// Handle Incoming Standard Input (stdin) from Claude
-// Claude sends JSON-RPC requests via stdin.
-const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-    terminal: false
-});
-
-rl.on('line', (line) => {
-    if (!line.trim()) return;
-
-    try {
-        const request = JSON.parse(line);
-        log(`Received from Claude: ${request.method} (ID: ${request.id})`);
-        // Translate this stdin message into an HTTP POST to Spring
-        sendRequest(request);
-    } catch (e) {
-        log(`Failed to parse stdin line: ${e.message}`);
+// Low-level fast stdin reader
+let buf = '';
+process.stdin.on('data', (chunk) => {
+    buf += chunk.toString();
+    let idx;
+    while ((idx = buf.indexOf('\n')) >= 0) {
+        const line = buf.substring(0, idx).trim();
+        buf = buf.substring(idx + 1);
+        if (line) {
+            try {
+                send(JSON.parse(line));
+            } catch (e) {
+                log(`!!! Stdin JSON Error: ${e.message}`);
+            }
+        }
     }
 });
 
-log('Bridge running and listening on Stdio...');
+connect();
 process.stdin.resume();
+log('Bridge Ready.');

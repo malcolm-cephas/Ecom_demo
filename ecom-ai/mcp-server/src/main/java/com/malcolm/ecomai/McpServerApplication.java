@@ -24,6 +24,12 @@ public class McpServerApplication {
                     jakarta.servlet.FilterChain chain)
                     throws java.io.IOException, jakarta.servlet.ServletException {
                 jakarta.servlet.http.HttpServletRequest req = (jakarta.servlet.http.HttpServletRequest) request;
+                jakarta.servlet.http.HttpServletResponse res = (jakarta.servlet.http.HttpServletResponse) response;
+
+                // Force unbuffered response for Railway/Nginx
+                res.setHeader("X-Accel-Buffering", "no");
+                res.setHeader("Cache-Control", "no-cache");
+
                 System.out.println("[MCP-SERVER-REQUEST] " + req.getMethod() + " " + req.getRequestURI());
                 chain.doFilter(request, response);
             }
