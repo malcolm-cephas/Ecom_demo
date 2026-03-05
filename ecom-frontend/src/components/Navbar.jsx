@@ -146,7 +146,7 @@ const Navbar = ({ onSelectCategory, onSearch }) => {
                     </li>
                     <li className="nav-item dropdown">
                       <a className="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                        Hi, {user.username}
+                        Hi, {user.sub || user.preferred_username || 'User'}
                       </a>
                       <ul className="dropdown-menu">
                         <li><button className="dropdown-item" onClick={logout}>Logout</button></li>
@@ -155,7 +155,7 @@ const Navbar = ({ onSelectCategory, onSearch }) => {
                   </>
                 ) : (
                   <li className="nav-item">
-                    <a className="nav-link" href="/login">Login</a>
+                    <button className="nav-link btn btn-link" onClick={() => login()}>Login</button>
                   </li>
                 )}
 

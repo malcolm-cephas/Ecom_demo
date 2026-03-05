@@ -5,6 +5,7 @@ import com.malcolm.ecomproj.repo.ProductRepo;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
@@ -32,6 +33,9 @@ public class DataSeeder implements CommandLineRunner {
     private final DataSource dataSource;
     private final ProductRepo repo;
 
+    @Value("${app.db.refresh:false}")
+    private boolean forceRefresh;
+
     @Override
     public void run(String... args) {
         // Step 1: Execute SQL seeds
@@ -46,9 +50,6 @@ public class DataSeeder implements CommandLineRunner {
     private void seedDatabase() {
         try (Connection conn = dataSource.getConnection();
                 Statement stmt = conn.createStatement()) {
-
-            // Optional: Force a refresh if a specific property is set
-            boolean forceRefresh = Boolean.getBoolean("app.db.refresh");
 
             // Check if products already exist
             try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM product")) {

@@ -1,38 +1,25 @@
-import { createContext, useState, useContext, useEffect } from 'react';
+import { useContext } from 'react';
+import { AuthContext } from 'react-oauth2-code-pkce';
 
-const AuthContext = createContext();
+// Now we simply export the OAuth2 PKCE hook wrapped to match the old interface slightly
+export const useAuth = () => {
+    const { token, login, logOut, idTokenData, error } = useContext(AuthContext);
 
-export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
+    if (error) {
+        console.error("OAuth2 Error:", error);
+    }
 
-    useEffect(() => {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-            setUser(JSON.parse(storedUser));
-        }
-        setLoading(false);
-    }, []);
+    if (token) {
+        console.log("OAuth2 Token acquired successfully!");
+    }
 
-    const login = (userData) => {
-        setUser(userData);
-        localStorage.setItem('user', JSON.stringify(userData));
-        localStorage.setItem('token', userData.token);
+    return {
+        user: idTokenData,
+        login: login, // triggers the redirect to Auth Server
+        logout: logOut,
+        isAuthenticated: () => !!token,
+        loading: false, // react-oauth2 handles its own loading state implicitly usually
+        token: token
     };
-
-    const logout = () => {
-        setUser(null);
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
-    };
-
-    const isAuthenticated = () => !!user;
-
-    return (
-        <AuthContext.Provider value={{ user, login, logout, isAuthenticated, loading }}>
-            {children}
-        </AuthContext.Provider>
-    );
 };
 
-export const useAuth = () => useContext(AuthContext);

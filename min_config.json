@@ -1,0 +1,10 @@
+{
+    "mcpServers": {
+        "ecom-railway": {
+            "command": "node",
+            "args": [
+                "d:/Malcolm/DSCE/Internship/SENSEI/ecommerce/ecom-ai/mcp-server/mcp-bridge.js"
+            ]
+        }
+    }
+}

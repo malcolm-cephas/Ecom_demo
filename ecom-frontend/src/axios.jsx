@@ -9,14 +9,27 @@ const API = axios.create({
 });
 
 
-// Add a request interceptor to inject the JWT token if available and log requests
 API.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const rawToken = localStorage.getItem('ROCP_token');
+
+    if (rawToken) {
+      let token = rawToken;
+      try {
+        const tokenObj = JSON.parse(rawToken);
+        // If it's a JSON object, extract the token; otherwise if it's just a string, use it
+        token = typeof tokenObj === 'string' ? tokenObj : (tokenObj.token || tokenObj.access_token || rawToken);
+      } catch (e) {
+        // Not JSON, use rawToken directly
+      }
+
+      // Final check: Remove any double-quotes that might have leaked from a bad JSON parse/storage
+      token = token.toString().replace(/^"(.*)"$/, '$1');
+
+      if (token && token.length > 20) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
-    console.log(`[Frontend Request] ${config.method.toUpperCase()} ${config.url}`, config.data || "");
     return config;
   },
   (error) => {

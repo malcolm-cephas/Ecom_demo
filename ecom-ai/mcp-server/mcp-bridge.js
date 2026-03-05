@@ -4,77 +4,95 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 
+// GLOBALLY BYPASS SSL CHECKS
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 const LOG_FILE = path.join(__dirname, 'mcp_bridge.log');
 const BASE_URL = 'https://mcp-server-production-b3d5.up.railway.app';
 const SSE_URL = `${BASE_URL}/sse`;
 
+const agent = new https.Agent({ rejectUnauthorized: false, keepAlive: true });
+
 function log(msg) {
-    const ts = new Date().toISOString();
-    fs.appendFileSync(LOG_FILE, `[${ts}] ${msg}\n`);
+    fs.appendFileSync(LOG_FILE, `[${new Date().toISOString()}] ${msg}\n`);
 }
 
-log(`--- MCP Bridge v13 (Large Payload Fix) Starting ---`);
+log(`--- MCP Bridge v15 (With OAuth Auth) Starting ---`);
 
 let messageEndpoint = null;
 let requestBuffer = [];
 let eventSource = null;
+let authToken = null;
 
-const agent = new https.Agent({
-    rejectUnauthorized: false,
-    keepAlive: true,
-    maxSockets: 100
-});
+async function fetchToken() {
+    log('Fetching OAuth2 token...');
+    try {
+        const response = await axios.post(`${BASE_URL}/oauth2/token`, 'grant_type=client_credentials&scope=openid', {
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Authorization': 'Basic ' + Buffer.from('mcp-client:secret').toString('base64')
+            },
+            httpsAgent: agent
+        });
+        authToken = response.data.access_token;
+        log('OAuth2 token fetched successfully.');
+        return true;
+    } catch (err) {
+        log(`!!! Failed to fetch OAuth2 token: ${err.message}`);
+        return false;
+    }
+}
 
 function connect() {
     log(`Connecting to: ${SSE_URL}`);
     if (eventSource) eventSource.close();
 
     eventSource = new EventSource(SSE_URL, {
-        https: { rejectUnauthorized: false },
         headers: {
+            'Authorization': `Bearer ${authToken}`,
             'Cache-Control': 'no-cache',
             'X-Accel-Buffering': 'no'
         }
     });
 
-    eventSource.onopen = () => log('Stream Active.');
+    eventSource.onopen = () => log('Stream established.');
 
     eventSource.onmessage = (event) => {
-        if (!event.data || !event.data.trim()) return;
+        if (!event.data) return;
+        const rawBody = event.data.trim();
+        if (!rawBody) return;
+
         try {
-            const dataStr = event.data.trim();
-            // Verify if it's a complete JSON-RPC message
-            if (dataStr.startsWith('{') && dataStr.endsWith('}')) {
-                const message = JSON.parse(dataStr);
-                if (message.jsonrpc) {
-                    // Force synchronous write to stdout to avoid buffering
-                    const output = JSON.stringify(message) + '\n';
-                    fs.writeSync(1, output);
-                    log(`<<< [RECV] ID: ${message.id} (Size: ${output.length} bytes)`);
-                }
-            } else {
-                log(`!!! Incomplete data: ${dataStr.substring(0, 50)}...`);
+            const message = JSON.parse(rawBody);
+            if (message.jsonrpc) {
+                // EXTREMELY IMPORTANT: Claude only reads one JSON per line
+                const finalOutput = JSON.stringify(message) + '\n';
+                process.stdout.write(finalOutput);
+                log(`<<< [RECV] ID: ${message.id} | Result: ${!!message.result} | Error: ${!!message.error}`);
             }
         } catch (e) {
-            log(`!!! Parse Fail: ${e.message} | Data snippet: ${event.data.substring(0, 50)}`);
+            log(`!!! [PARSE ERROR] ${e.message} | Snippet: ${rawBody.substring(0, 100)}`);
         }
     };
 
     eventSource.addEventListener('endpoint', (event) => {
         messageEndpoint = `${BASE_URL}${event.data.trim()}`;
-        log(`### Endpoint Linked: ${messageEndpoint}`);
+        log(`### Session Ready: ${messageEndpoint}`);
         while (requestBuffer.length > 0) send(requestBuffer.shift());
     });
 
     eventSource.onerror = (err) => {
-        log(`!!! SSE Error: ${err.message || 'Signal Lost'}`);
+        log(`!!! SSE Error: ${err.message || err.status || 'Signal lost'}`);
         messageEndpoint = null;
+        if (err.status === 401 || String(err.message).includes('Unauthorized') || String(err.status).includes('401')) {
+            log('Token has likely expired after a disconnect. Exiting so Claude can safely restart the bridge.');
+            process.exit(1);
+        }
     };
 }
 
 async function send(req) {
-    if (!messageEndpoint) {
+    if (!messageEndpoint || !authToken) {
         log(`Queue: ${req.method} (${req.id})`);
         requestBuffer.push(req);
         return;
@@ -82,31 +100,40 @@ async function send(req) {
     try {
         log(`>>> [SEND] ${req.method} (${req.id})`);
         await axios.post(messageEndpoint, req, {
-            headers: { 'Content-Type': 'application/json' },
-            httpsAgent: agent,
-            timeout: 60000
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            httpsAgent: agent
         });
-        log(`>>> [SENT] OK`);
+        log(`>>> [SENT] Success`);
     } catch (err) {
         log(`!!! POST FAIL: ${err.message}`);
+        // If unauthorized, you might eventually need to re-fetch the token,
+        // but 5 mins is usually fine for testing.
     }
 }
 
-let buf = '';
-process.stdin.on('data', (chunk) => {
-    buf += chunk.toString();
-    let idx;
-    while ((idx = buf.indexOf('\n')) >= 0) {
-        const line = buf.substring(0, idx).trim();
-        buf = buf.substring(idx + 1);
-        if (line) {
-            try {
-                send(JSON.parse(line));
-            } catch (e) { }
-        }
-    }
+// Stream stdin directly from Claude
+process.stdin.on('data', (d) => {
+    d.toString().split('\n').forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+        try {
+            send(JSON.parse(trimmed));
+        } catch (e) { }
+    });
 });
 
-connect();
-process.stdin.resume();
-log('Bridge v13 ready.');
+async function start() {
+    if (await fetchToken()) {
+        connect();
+        process.stdin.resume();
+        log('Bridge v15 ready.');
+    } else {
+        log('Could not start bridge due to auth failure.');
+        process.exit(1);
+    }
+}
+
+start();

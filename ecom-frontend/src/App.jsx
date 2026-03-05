@@ -15,7 +15,6 @@ import "bootstrap/dist/css/bootstrap.min.css"; // Global styles
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { ToastProvider } from "./Context/ToastContext"; // UI notifications
 import ChatBox from "./components/ChatBox"; // Import ChatBox
-import { AuthProvider } from "./Context/AuthContext";
 import Login from "./components/Login";
 import Register from "./components/Register";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -36,7 +35,7 @@ function App() {
   };
 
   return (
-    <AuthProvider>
+    <>
       <AppProvider>
         <ToastProvider>
           <BrowserRouter>
@@ -76,7 +75,7 @@ function App() {
           </BrowserRouter>
         </ToastProvider>
       </AppProvider>
-    </AuthProvider>
+    </>
   );
 }
 

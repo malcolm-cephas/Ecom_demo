@@ -1,7 +1,13 @@
 {
+  "preferences": {
+    "coworkWebSearchEnabled": true
+  },
   "mcpServers": {
-    "mcp-server": {
-      "url": "http://localhost:9091/sse"
+    "ecom-remote": {
+      "command": "node",
+      "args": [
+        "D:\\Malcolm\\DSCE\\Internship\\SENSEI\\ecommerce\\ecom-ai\\mcp-server\\mcp-bridge.js"
+      ]
     }
   }
 }
