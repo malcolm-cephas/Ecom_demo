@@ -10,6 +10,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,12 +30,17 @@ public class ProductController {
 
     private final ProductService service;
 
+    private String getUserId(Authentication auth) {
+        return (auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser")) ? auth.getName()
+                : null;
+    }
+
     /**
      * Retrieves all products available in the database.
      */
     @GetMapping("/products")
-    public ResponseEntity<List<Product>> getAllProducts() {
-        return new ResponseEntity<>(service.getAllProducts(), HttpStatus.OK);
+    public ResponseEntity<List<Product>> getAllProducts(Authentication authentication) {
+        return new ResponseEntity<>(service.getAllProducts(getUserId(authentication)), HttpStatus.OK);
     }
 
     /**
@@ -45,11 +51,13 @@ public class ProductController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,
             @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "ASC") String sortDirection) {
+            @RequestParam(defaultValue = "ASC") String sortDirection,
+            Authentication authentication) {
 
         Sort.Direction direction = Sort.Direction.fromString(Objects.requireNonNull(sortDirection).toUpperCase());
         return new ResponseEntity<>(
-                service.getAllProducts(page, size, Objects.requireNonNull(sortBy), Objects.requireNonNull(direction)),
+                service.getAllProducts(page, size, Objects.requireNonNull(sortBy), direction,
+                        getUserId(authentication)),
                 HttpStatus.OK);
     }
 
@@ -57,8 +65,8 @@ public class ProductController {
      * Gets details for a single product by its unique ID.
      */
     @GetMapping("/product/{id}")
-    public ResponseEntity<Product> getProduct(@PathVariable int id) {
-        Product product = service.getProduct(id);
+    public ResponseEntity<Product> getProduct(@PathVariable int id, Authentication authentication) {
+        Product product = service.getProduct(id, getUserId(authentication));
         if (product != null) {
             return new ResponseEntity<>(product, HttpStatus.OK);
         } else {
@@ -88,8 +96,9 @@ public class ProductController {
      */
     @GetMapping("/product/{productId}/image")
     public ResponseEntity<byte[]> getImageByProductId(@PathVariable int productId) {
-        Product product = service.getProduct(productId);
-        byte[] imageFile = product.getImageData();
+        // userId not strictly necessary just to fetch image byte array
+        Product product = service.getProduct(productId, null);
+        byte[] imageFile = product != null ? product.getImageData() : null;
 
         if (imageFile != null && product.getImageType() != null) {
             return ResponseEntity.ok().contentType(MediaType.valueOf(Objects.requireNonNull(product.getImageType())))
@@ -126,7 +135,7 @@ public class ProductController {
      */
     @DeleteMapping("/product/{id}")
     public ResponseEntity<String> deleteProduct(@PathVariable int id) {
-        Product product = service.getProduct(id);
+        Product product = service.getProduct(id, null);
         if (product != null) {
             service.deleteProduct(id);
             return new ResponseEntity<>("Deleted", HttpStatus.OK);
@@ -140,8 +149,8 @@ public class ProductController {
      * descriptions.
      */
     @GetMapping("/products/search")
-    public ResponseEntity<List<Product>> searchProducts(@RequestParam String keyword) {
-        List<Product> products = service.searchProducts(keyword);
+    public ResponseEntity<List<Product>> searchProducts(@RequestParam String keyword, Authentication authentication) {
+        List<Product> products = service.searchProducts(keyword, getUserId(authentication));
         return new ResponseEntity<>(products, HttpStatus.OK);
     }
 
@@ -164,11 +173,12 @@ public class ProductController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "9") int size,
             @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "ASC") String sortDirection) {
+            @RequestParam(defaultValue = "ASC") String sortDirection,
+            Authentication authentication) {
 
         Sort.Direction direction = Sort.Direction.fromString(Objects.requireNonNull(sortDirection).toUpperCase());
-        Page<Product> products = service.searchProducts(keyword, page, size, Objects.requireNonNull(sortBy),
-                Objects.requireNonNull(direction));
+        Page<Product> products = service.searchProducts(keyword, page, size, Objects.requireNonNull(sortBy), direction,
+                getUserId(authentication));
         return new ResponseEntity<>(products, HttpStatus.OK);
     }
 
@@ -176,8 +186,13 @@ public class ProductController {
      * Toggles the favorite status of a product.
      */
     @PutMapping("/product/{id}/favorite")
-    public ResponseEntity<Product> toggleFavorite(@PathVariable int id) {
-        Product product = service.toggleFavorite(id);
+    public ResponseEntity<Product> toggleFavorite(@PathVariable int id, Authentication authentication) {
+        String userId = getUserId(authentication);
+        if (userId == null) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
+
+        Product product = service.toggleFavorite(id, userId);
         if (product != null) {
             return new ResponseEntity<>(product, HttpStatus.OK);
         } else {

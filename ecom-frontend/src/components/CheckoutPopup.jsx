@@ -13,11 +13,15 @@ const CheckoutPopup = ({ show, handleClose, cartItems, totalPrice, handleCheckou
           <div className="checkout-items">
             {cartItems.map((item) => (
               <div key={item.id} className="checkout-item" style={{ display: 'flex', marginBottom: '10px' }}>
-                <img src={item.imageUrl} alt={item.name} style={{ width: '200px', marginRight: '10px' }} />
+                <img
+                  src={item.product?.imageUrl || `http://localhost:8080/api/product/${item.product?.id}/image`}
+                  alt={item.product?.name}
+                  style={{ width: '100px', marginRight: '10px', objectFit: 'cover', borderRadius: '8px' }}
+                />
                 <div>
-                  <b><p>{item.name}</p></b>
-                  <p>Quantity: {item.quantity}</p>
-                  <p>Price: ₹ {item.price * item.quantity}</p>
+                  <b><p className="mb-1">{item.product?.name}</p></b>
+                  <p className="mb-1 text-muted small">Quantity: {item.quantity}</p>
+                  <p className="mb-0 fw-bold text-primary">Price: ₹ {((item.product?.price || 0) * item.quantity).toLocaleString()}</p>
                 </div>
               </div>
             ))}

@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import API from '../axios';
-import { useAuth } from '../Context/AuthContext';
+import axios from 'axios';
 import { useToast } from '../Context/ToastContext';
 
 const Register = () => {
     const [user, setUser] = useState({ username: '', email: '', password: '' });
-    const { login } = useAuth();
     const { addToast } = useToast();
     const navigate = useNavigate();
 
@@ -17,10 +15,12 @@ const Register = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await API.post('/auth/register', user);
-            login(response.data);
-            addToast('Registration Successful!', 'success');
-            navigate('/');
+            await axios.post('http://localhost:9000/api/register', {
+                username: user.username,
+                password: user.password
+            });
+            addToast('Registration Successful! Please login.', 'success');
+            navigate('/login');
         } catch (error) {
             addToast(error.response?.data?.message || 'Registration Failed', 'error');
         }

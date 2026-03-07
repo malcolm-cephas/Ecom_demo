@@ -47,6 +47,7 @@ public class Product {
     @Min(value = 0, message = "Stock quantity cannot be negative")
     private int stockQuantity;
 
+    @Transient
     private boolean favorite;
 
     private String imageName;

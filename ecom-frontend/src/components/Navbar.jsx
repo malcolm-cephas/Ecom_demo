@@ -1,33 +1,43 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import axios from "../axios";
 import { CATEGORIES } from "../constants";
-import AppContext from "../Context/Context";
 import { useAuth } from "../Context/AuthContext";
+import useCartStore from "../store/useCartStore";
+import useUserStore from "../store/useUserStore";
+import {
+  ShoppingCart,
+  Moon,
+  Sun,
+  Search,
+  User as UserIcon,
+  LogOut,
+  PlusCircle,
+  Menu
+} from "lucide-react";
 
 const Navbar = ({ onSelectCategory, onSearch }) => {
-  const { cart } = useContext(AppContext);
-  const { user, logout } = useAuth();
+  const { cart } = useCartStore();
+  const { user, logout, login, isAuthenticated, loading: authLoading } = useAuth();
+
   const getInitialTheme = () => {
     const storedTheme = localStorage.getItem("theme");
     return storedTheme ? storedTheme : "light-theme";
   };
+
   const [selectedCategory, setSelectedCategory] = useState("");
   const [theme, setTheme] = useState(getInitialTheme());
   const [input, setInput] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [noResults, setNoResults] = useState(false);
-  const [searchFocused, setSearchFocused] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false)
 
-  // Debounce the search input to avoid making API calls on every keystroke.
-  // Waits for 300ms of inactivity before firing the search request.
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       if (input.length >= 1) {
         setShowSearchResults(true);
         searchProducts(input);
       } else {
-        // Clear results if input is empty
         setShowSearchResults(false);
         setSearchResults([]);
         setNoResults(false);
@@ -39,9 +49,7 @@ const Navbar = ({ onSelectCategory, onSearch }) => {
 
   const searchProducts = async (value) => {
     try {
-      const response = await axios.get(
-        `/products/search?keyword=${value}`
-      );
+      const response = await axios.get(`/products/search?keyword=${value}`);
       setSearchResults(response.data);
       setNoResults(response.data.length === 0);
     } catch (error) {
@@ -49,183 +57,155 @@ const Navbar = ({ onSelectCategory, onSearch }) => {
     }
   };
 
-  const handleChange = (value) => {
-    setInput(value);
-  };
   const handleCategorySelect = (category) => {
     setSelectedCategory(category);
-    onSelectCategory(category); // Notify parent (App.jsx) to update the Home view
+    onSelectCategory(category);
   };
 
   const toggleTheme = () => {
     const newTheme = theme === "dark-theme" ? "light-theme" : "dark-theme";
     setTheme(newTheme);
-    localStorage.setItem("theme", newTheme); // Persist theme preference
+    localStorage.setItem("theme", newTheme);
   };
 
   useEffect(() => {
     document.body.className = theme;
   }, [theme]);
 
-  const categories = CATEGORIES;
+  const cartCount = cart?.items?.length || 0;
+
   return (
-    <>
-      <header>
-        <nav className="navbar navbar-expand-lg fixed-top">
-          <div className="container-fluid">
-            <a className="navbar-brand" href="/">
-              Malcolm
-            </a>
-            <button
-              className="navbar-toggler"
-              type="button"
-              data-bs-toggle="collapse"
-              data-bs-target="#navbarSupportedContent"
-              aria-controls="navbarSupportedContent"
-              aria-expanded="false"
-              aria-label="Toggle navigation"
-            >
-              <span className="navbar-toggler-icon"></span>
-            </button>
-            <div
-              className="collapse navbar-collapse"
-              id="navbarSupportedContent"
-            >
-              <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-                <li className="nav-item">
-                  <a className="nav-link active" aria-current="page" href="/">
-                    Home
-                  </a>
-                </li>
-                <li className="nav-item">
-                  <a className="nav-link" href="/favourites">
-                    Favourites
-                  </a>
-                </li>
+    <header>
+      <nav className="navbar navbar-expand-lg fixed-top shadow-sm px-3" style={{
+        backgroundColor: "rgba(255, 255, 255, 0.8)",
+        backdropFilter: "blur(10px)",
+        borderBottom: "1px solid rgba(0,0,0,0.05)"
+      }}>
+        <div className="container-fluid">
+          <Link className="navbar-brand fw-bold text-primary" to="/" style={{ fontSize: "1.5rem" }}>
+            Malcolm
+          </Link>
 
-                <li className="nav-item dropdown">
-                  <a
-                    className="nav-link dropdown-toggle"
-                    href="/"
-                    role="button"
-                    data-bs-toggle="dropdown"
-                    aria-expanded="false"
-                  >
-                    Categories
-                  </a>
+          <button
+            className="navbar-toggler border-0"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#navbarSupportedContent"
+          >
+            <Menu size={24} />
+          </button>
 
-                  <ul className="dropdown-menu">
-                    <li>
-                      <button
-                        className="dropdown-item"
-                        onClick={() => handleCategorySelect("")}
-                      >
-                        All Products
+          <div className="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul className="navbar-nav me-auto mb-2 mb-lg-0 align-items-center">
+              <li className="nav-item">
+                <Link className="nav-link fw-medium" to="/">Home</Link>
+              </li>
+
+              <li className="nav-item dropdown">
+                <a className="nav-link dropdown-toggle fw-medium" href="#" role="button" data-bs-toggle="dropdown">
+                  Categories
+                </a>
+                <ul className="dropdown-menu border-0 shadow-sm">
+                  <li>
+                    <button className="dropdown-item" onClick={() => handleCategorySelect("")}>
+                      All Products
+                    </button>
+                  </li>
+                  <li className="dropdown-divider"></li>
+                  {CATEGORIES.map((category) => (
+                    <li key={category}>
+                      <button className="dropdown-item" onClick={() => handleCategorySelect(category)}>
+                        {category}
                       </button>
                     </li>
-                    <li className="dropdown-divider"></li>
-                    {categories.map((category) => (
-                      <li key={category}>
-                        <button
-                          className="dropdown-item"
-                          onClick={() => handleCategorySelect(category)}
-                        >
-                          {category}
+                  ))}
+                </ul>
+              </li>
+
+              {authLoading ? (
+                <li className="nav-item px-2">
+                  <div className="spinner-border spinner-border-sm text-primary" role="status"></div>
+                </li>
+              ) : isAuthenticated ? (
+                <>
+                  <li className="nav-item">
+                    <Link className="nav-link d-flex align-items-center gap-1" to="/add_product">
+                      <PlusCircle size={18} />
+                      <span>Add Product</span>
+                    </Link>
+                  </li>
+                  <li className="nav-item dropdown ms-lg-3">
+                    <a className="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" role="button" data-bs-toggle="dropdown">
+                      <div className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style={{ width: "32px", height: "32px" }}>
+                        <UserIcon size={18} />
+                      </div>
+                      <span className="fw-medium d-none d-xl-inline">
+                        {user?.sub || user?.name || 'User'}
+                      </span>
+                    </a>
+                    <ul className="dropdown-menu dropdown-menu-end border-0 shadow-sm">
+                      <li><Link className="dropdown-item" to="/favourites">Favourites</Link></li>
+                      <li><hr className="dropdown-divider" /></li>
+                      <li>
+                        <button className="dropdown-item text-danger d-flex align-items-center gap-2" onClick={logout}>
+                          <LogOut size={16} />
+                          Logout
                         </button>
                       </li>
-                    ))}
-                  </ul>
-                </li>
-
-                {user ? (
-                  <>
-                    <li className="nav-item">
-                      <a className="nav-link" href="/add_product">
-                        Add Product
-                      </a>
-                    </li>
-                    <li className="nav-item dropdown">
-                      <a className="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                        Hi, {user.sub || user.preferred_username || 'User'}
-                      </a>
-                      <ul className="dropdown-menu">
-                        <li><button className="dropdown-item" onClick={logout}>Logout</button></li>
-                      </ul>
-                    </li>
-                  </>
-                ) : (
-                  <li className="nav-item">
-                    <button className="nav-link btn btn-link" onClick={() => login()}>Login</button>
+                    </ul>
                   </li>
-                )}
+                </>
+              ) : (
+                <li className="nav-item ms-lg-3">
+                  <button className="btn btn-primary btn-sm px-4 rounded-pill" onClick={() => login()}>Login</button>
+                </li>
+              )}
+            </ul>
 
-                <li className="nav-item"></li>
-              </ul>
-              <button className="theme-btn" onClick={() => toggleTheme()}>
-                {theme === "dark-theme" ? (
-                  <i className="bi bi-moon-fill"></i>
-                ) : (
-                  <i className="bi bi-sun-fill"></i>
-                )}
-              </button>
-              <div className="d-flex align-items-center cart">
-                <a href="/cart" className="nav-link text-dark position-relative">
-                  <i
-                    className="bi bi-cart me-2"
-                    style={{ display: "flex", alignItems: "center" }}
-                  >
-                    Cart
-                  </i>
-                  {cart.length > 0 && (
-                    <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                      {cart.length}
-                    </span>
-                  )}
-                </a>
-                {/* <form className="d-flex" role="search" onSubmit={handleSearch} id="searchForm"> */}
+            <div className="d-flex align-items-center gap-3">
+              <div className="position-relative d-none d-md-block" style={{ width: "250px" }}>
+                <Search className="position-absolute top-50 start-0 translate-middle-y ms-2 text-muted" size={18} />
                 <input
-                  className="form-control me-2"
+                  className="form-control form-control-sm ps-5 rounded-pill border-0 bg-light"
                   type="search"
-                  placeholder="Search"
-                  aria-label="Search"
+                  placeholder="Search products..."
                   value={input}
-                  onChange={(e) => handleChange(e.target.value)}
-                  onFocus={() => setSearchFocused(true)} // Set searchFocused to true when search bar is focused
-                  onBlur={() => setSearchFocused(false)} // Set searchFocused to false when search bar loses focus
+                  onChange={(e) => setInput(e.target.value)}
                 />
                 {showSearchResults && (
-                  <ul className="list-group">
+                  <ul className="list-group position-absolute w-100 mt-2 shadow-sm border-0" style={{ zIndex: 1000 }}>
                     {searchResults.length > 0 ? (
                       searchResults.map((result) => (
-                        <li key={result.id} className="list-group-item">
-                          <a href={`/product/${result.id}`} className="search-result-link">
-                            <span>{result.name}</span>
-                          </a>
+                        <li key={result.id} className="list-group-item list-group-item-action border-0">
+                          <Link to={`/product/${result.id}`} className="text-decoration-none text-dark d-block">
+                            {result.name}
+                          </Link>
                         </li>
                       ))
-                    ) : (
-                      noResults && (
-                        <p className="no-results-message">
-                          No Prouduct with such Name
-                        </p>
-                      )
+                    ) : noResults && (
+                      <li className="list-group-item border-0 text-muted small">No products found</li>
                     )}
                   </ul>
                 )}
-                {/* <button
-                  className="btn btn-outline-success"
-                  onClick={handleSearch}
-                >
-                  Search Products
-                </button> */}
-                {/* </form> */}
-                <div />
               </div>
+
+              <button className="btn btn-link text-dark p-2" onClick={toggleTheme}>
+                {theme === "dark-theme" ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
+
+              <Link to="/cart" className="btn btn-link text-dark p-2 position-relative">
+                <ShoppingCart size={22} />
+                {cartCount > 0 && (
+                  <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{ fontSize: "0.6rem" }}>
+                    {cartCount}
+                  </span>
+                )}
+              </Link>
             </div>
           </div>
-        </nav>
-      </header >
-    </>
+        </div>
+      </nav>
+    </header>
   );
 };
 

@@ -1,25 +1,48 @@
-import { useContext } from 'react';
+import { useContext, useEffect } from 'react';
 import { AuthContext } from 'react-oauth2-code-pkce';
+import useUserStore from '../store/useUserStore';
+import useCartStore from '../store/useCartStore';
 
-// Now we simply export the OAuth2 PKCE hook wrapped to match the old interface slightly
 export const useAuth = () => {
-    const { token, login, logOut, idTokenData, error } = useContext(AuthContext);
+    const { token, idToken, login, logOut, idTokenData, error, loading: oauthLoading } = useContext(AuthContext);
+    const { setAuth, clearAuth, user: storeUser, isAuthenticated: storeAuth, token: storeToken } = useUserStore();
+    const { fetchCart, setCart } = useCartStore();
 
-    if (error) {
-        console.error("OAuth2 Error:", error);
-    }
+    useEffect(() => {
+        if (token) {
+            setAuth(token, idTokenData);
+            fetchCart(); // Fetch personalized cart on login
+        } else if (!oauthLoading && !token) {
+            clearAuth();
+            setCart({ items: [] });
+        }
+    }, [token, idTokenData, oauthLoading, setAuth, clearAuth, fetchCart, setCart]);
 
-    if (token) {
-        console.log("OAuth2 Token acquired successfully!");
-    }
+    const handleLogout = () => {
+        // Explicitly clear our local zustand states first
+        clearAuth();
+        setCart({ items: [] });
+
+        // Explicitly clear ROCP storage to avoid re-auth on redirect/reload
+        // The library should do this, but doing it manually ensures it's done before redirect
+        Object.keys(sessionStorage).forEach(key => {
+            if (key.includes('ROCP_')) sessionStorage.removeItem(key);
+        });
+        Object.keys(localStorage).forEach(key => {
+            if (key.includes('ROCP_')) localStorage.removeItem(key);
+        });
+
+        // Log out from library (this will clear memory and redirect to logoutEndpoint)
+        logOut();
+    };
 
     return {
-        user: idTokenData,
-        login: login, // triggers the redirect to Auth Server
-        logout: logOut,
-        isAuthenticated: () => !!token,
-        loading: false, // react-oauth2 handles its own loading state implicitly usually
-        token: token
+        user: storeUser || idTokenData,
+        login: login,
+        logout: handleLogout,
+        isAuthenticated: storeAuth || (!!token || !!idToken),
+        loading: oauthLoading,
+        token: storeToken || token,
+        error: error
     };
 };
-

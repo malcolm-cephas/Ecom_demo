@@ -1,42 +1,72 @@
 package com.malcolm.ecomproj.service;
 
-import java.util.Objects;
 import com.malcolm.ecomproj.model.Product;
 import com.malcolm.ecomproj.repo.ProductRepo;
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
+
+import com.malcolm.ecomproj.repo.FavoriteRepo;
+import com.malcolm.ecomproj.model.Favorite;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class ProductService {
 
     private final ProductRepo repo;
+    private final FavoriteRepo favoriteRepo;
 
-    public List<Product> getAllProducts() {
-        return repo.findAll();
+    private void populateFavorites(List<Product> products, String userId) {
+        if (userId == null || userId.trim().isEmpty())
+            return;
+        List<Favorite> favorites = favoriteRepo.findByUserId(userId);
+        Set<Integer> favoriteIds = favorites.stream()
+                .map(f -> f.getProduct().getId())
+                .collect(Collectors.toSet());
+        products.forEach(p -> p.setFavorite(favoriteIds.contains(p.getId())));
     }
 
-    public Page<Product> getAllProducts(int page, int size) {
+    private Product populateFavorite(Product product, String userId) {
+        if (product != null && userId != null && !userId.trim().isEmpty()) {
+            Optional<Favorite> favorite = favoriteRepo.findByUserIdAndProductId(userId, product.getId());
+            product.setFavorite(favorite.isPresent());
+        }
+        return product;
+    }
+
+    public List<Product> getAllProducts(String userId) {
+        List<Product> products = repo.findAll();
+        populateFavorites(products, userId);
+        return products;
+    }
+
+    public Page<Product> getAllProducts(int page, int size, String userId) {
         Pageable pageable = PageRequest.of(page, size);
-        return repo.findAll(pageable);
+        Page<Product> pageResult = repo.findAll(pageable);
+        populateFavorites(pageResult.getContent(), userId);
+        return pageResult;
     }
 
-    public Page<Product> getAllProducts(int page, int size, String sortBy, Sort.Direction direction) {
+    public Page<Product> getAllProducts(int page, int size, String sortBy, Sort.Direction direction, String userId) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Objects.requireNonNull(direction), sortBy));
-        return repo.findAll(pageable);
+        Page<Product> pageResult = repo.findAll(pageable);
+        populateFavorites(pageResult.getContent(), userId);
+        return pageResult;
     }
 
-    public Product getProduct(int id) {
-        return repo.findById(id).orElse(null);
+    public Product getProduct(int id, String userId) {
+        Product product = repo.findById(id).orElse(null);
+        return populateFavorite(product, userId);
     }
 
     public Product addProduct(Product product, MultipartFile imageFile) throws IOException {
@@ -77,27 +107,49 @@ public class ProductService {
         repo.deleteById(id);
     }
 
-    public List<Product> searchProducts(String keyword) {
-        return repo.searchProducts(keyword);
+    public List<Product> searchProducts(String keyword, String userId) {
+        List<Product> products = repo.searchProducts(keyword);
+        populateFavorites(products, userId);
+        return products;
     }
 
-    public Page<Product> searchProducts(String keyword, int page, int size) {
+    public Page<Product> searchProducts(String keyword, int page, int size, String userId) {
         Pageable pageable = PageRequest.of(page, size);
-        return repo.searchProducts(keyword, pageable);
+        Page<Product> pageResult = repo.searchProducts(keyword, pageable);
+        populateFavorites(pageResult.getContent(), userId);
+        return pageResult;
     }
 
-    public Page<Product> searchProducts(String keyword, int page, int size, String sortBy, Sort.Direction direction) {
+    public Page<Product> searchProducts(String keyword, int page, int size, String sortBy, Sort.Direction direction,
+            String userId) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Objects.requireNonNull(direction), sortBy));
-        return repo.searchProducts(keyword, pageable);
+        Page<Product> pageResult = repo.searchProducts(keyword, pageable);
+        populateFavorites(pageResult.getContent(), userId);
+        return pageResult;
     }
 
-    public Product toggleFavorite(int id) {
+    public Product toggleFavorite(int id, String userId) {
         Product product = repo.findById(id).orElse(null);
-        if (product != null) {
-            product.setFavorite(!product.isFavorite());
-            return repo.save(product);
+        if (product == null || userId == null || userId.trim().isEmpty()) {
+            return null;
         }
-        return null;
+
+        Optional<Favorite> existingFavorite = favoriteRepo.findByUserIdAndProductId(userId, id);
+
+        if (existingFavorite.isPresent()) {
+            // Already favorited, so remove it
+            favoriteRepo.delete(existingFavorite.get());
+            product.setFavorite(false);
+        } else {
+            // Not favorited, so add it
+            Favorite newFavorite = new Favorite();
+            newFavorite.setUserId(userId);
+            newFavorite.setProduct(product);
+            favoriteRepo.save(newFavorite);
+            product.setFavorite(true);
+        }
+
+        return product;
     }
 
 }

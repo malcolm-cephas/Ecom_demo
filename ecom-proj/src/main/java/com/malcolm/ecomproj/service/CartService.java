@@ -18,28 +18,21 @@ public class CartService {
     private final CartRepo cartRepo;
     private final ProductRepo productRepo;
 
-    // Use a fixed session ID for this demo
-    private static final String DEFAULT_SESSION_ID = "default_session";
-
     @Transactional
-    public Cart getCart() {
-        Cart cart = cartRepo.findBySessionId(DEFAULT_SESSION_ID);
+    public Cart getCart(String sessionId) {
+        Cart cart = cartRepo.findBySessionId(sessionId);
         if (cart == null) {
-            System.out.println("Cart not found for session " + DEFAULT_SESSION_ID + ", creating new one.");
+            System.out.println("Cart not found for session " + sessionId + ", creating new one.");
             cart = new Cart();
-            cart.setSessionId(DEFAULT_SESSION_ID);
+            cart.setSessionId(sessionId);
             cart = cartRepo.save(cart);
-        } else {
-            System.out
-                    .println("Found existing cart id=" + cart.getId() + " with " + cart.getItems().size() + " items.");
         }
         return cart;
     }
 
     @Transactional
-    public Cart addToCart(int productId, int quantity) {
-        System.out.println("Adding product " + productId + " quantity " + quantity + " to cart.");
-        Cart cart = getCart();
+    public Cart addToCart(String sessionId, int productId, int quantity) {
+        Cart cart = getCart(sessionId);
         Product product = productRepo.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
 
@@ -48,35 +41,30 @@ public class CartService {
                 .findFirst();
 
         if (existingItem.isPresent()) {
-            CartItem item = existingItem.get();
-            item.setQuantity(item.getQuantity() + quantity);
-            System.out.println("Updated quantity for product " + productId + " to " + item.getQuantity());
+            existingItem.get().setQuantity(existingItem.get().getQuantity() + quantity);
         } else {
             CartItem newItem = new CartItem();
             newItem.setProduct(product);
             newItem.setQuantity(quantity);
             cart.addItem(newItem);
-            System.out.println("Added new item for product " + productId);
         }
 
-        Cart savedCart = cartRepo.save(cart);
-        System.out.println("Cart saved. Total items: " + savedCart.getItems().size());
-        return savedCart;
+        return cartRepo.save(cart);
     }
 
     @Transactional
-    public Cart removeFromCart(int productId) {
-        Cart cart = getCart();
+    public Cart removeFromCart(String sessionId, int productId) {
+        Cart cart = getCart(sessionId);
         cart.getItems().removeIf(item -> item.getProduct().getId() == productId);
         return cartRepo.save(cart);
     }
 
     @Transactional
-    public Cart updateQuantity(int productId, int newQuantity) {
+    public Cart updateQuantity(String sessionId, int productId, int newQuantity) {
         if (newQuantity <= 0) {
-            return removeFromCart(productId);
+            return removeFromCart(sessionId, productId);
         }
-        Cart cart = getCart();
+        Cart cart = getCart(sessionId);
         Optional<CartItem> existingItem = cart.getItems().stream()
                 .filter(item -> item.getProduct().getId() == productId)
                 .findFirst();
@@ -89,8 +77,8 @@ public class CartService {
     }
 
     @Transactional
-    public void clearCart() {
-        Cart cart = getCart();
+    public void clearCart(String sessionId) {
+        Cart cart = getCart(sessionId);
         cart.getItems().clear();
         cartRepo.save(cart);
     }

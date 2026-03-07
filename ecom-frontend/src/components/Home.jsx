@@ -1,112 +1,55 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import axios from "../axios"; // Unified axios instance
-import AppContext from "../Context/Context"; // Global state (cart/favorites)
-import { useToast } from "../Context/ToastContext"; // UI alerts
+import useCartStore from "../store/useCartStore";
+import useUserStore from "../store/useUserStore";
+import useProductStore from "../store/useProductStore";
+import { Heart, ShoppingCart, Loader2 } from "lucide-react";
 
-/**
- * Home Component: The landing page that displays the product grid.
- * It handles fetching products from the backend with pagination and category filtering.
- * 
- * @param {string} selectedCategory - Passed from Navbar to filter products
- */
 const Home = ({ selectedCategory }) => {
-  const { isError, addToCart, toggleFavorite } = useContext(AppContext);
-  const { addToast } = useToast();
+  const { addToCart } = useCartStore();
+  const { isAuthenticated } = useUserStore();
+  const {
+    products,
+    loading,
+    fetchProducts,
+    toggleFavorite,
+    totalPages,
+    currentPage
+  } = useProductStore();
 
-  // Local state for products and loading status
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
   const productsPerPage = 9;
 
-  // Fetch products whenever the category or page changes
-  // This effect handles both browsing all products and filtering by category/search
   useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true);
-      try {
-        // Construct the URL based on whether a category filter is active
-        let url = `/products/page?page=${currentPage - 1}&size=${productsPerPage}`;
-        if (selectedCategory) {
-          // Use search endpoint as a proxy for category filtering if a category is selected
-          // Note: Pagination indices are 0-based in backend but 1-based in frontend state
-          url = `/products/search/page?keyword=${selectedCategory}&page=${currentPage - 1}&size=${productsPerPage}`;
-        }
+    fetchProducts(0, productsPerPage, selectedCategory);
+  }, [selectedCategory, fetchProducts]);
 
-        const response = await axios.get(url);
-        // Spring Data Page object returns items in the 'content' array
-        setProducts(response.data.content);
-        setTotalPages(response.data.totalPages);
-      } catch (error) {
-        console.error("Error fetching products:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, [selectedCategory, currentPage]);
-
-  // Navigate to a specific page
   const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
+    fetchProducts(pageNumber - 1, productsPerPage, selectedCategory);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  /**
-   * Toggles the "Heart" icon status and synchronizes with the backend database.
-   */
   const handleToggleFavorite = async (productId, e) => {
-    e.preventDefault(); // Prevent link navigation
+    e.preventDefault();
     e.stopPropagation();
-    const updatedProduct = await toggleFavorite(productId);
-    if (updatedProduct) {
-      // Update the local list to reflect the new favorite status
-      setProducts(prevProducts => prevProducts.map(p =>
-        p.id === productId ? { ...p, favorite: updatedProduct.favorite } : p
-      ));
+
+    if (!isAuthenticated) {
+      window.location.href = '/login';
+      return;
+    }
+
+    try {
+      await toggleFavorite(productId);
+    } catch (error) {
+      console.error("Failed to toggle favorite:", error);
     }
   };
-
-  // Error boundary display
-  if (isError) {
-    return (
-      <h2 className="text-center" style={{ padding: "10rem" }}>
-        Something went wrong...
-      </h2>
-    );
-  }
 
   return (
     <>
       <div className="container" style={{ marginTop: "100px", marginBottom: "100px" }}>
-        {/* Loading Skeletons */}
         {loading ? (
-          <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-            {[...Array(6)].map((_, i) => (
-              <div className="col" key={i}>
-                <div className="card h-100 border-0 shadow-sm" aria-hidden="true">
-                  <div className="placeholder-glow">
-                    <div className="placeholder col-12" style={{ height: "200px" }}></div>
-                  </div>
-                  <div className="card-body">
-                    <h5 className="card-title placeholder-glow">
-                      <span className="placeholder col-6"></span>
-                    </h5>
-                    <p className="card-text placeholder-glow">
-                      <span className="placeholder col-7"></span>
-                      <span className="placeholder col-4"></span>
-                      <span className="placeholder col-4"></span>
-                    </p>
-                    <a href="#" tabIndex="-1" className="btn btn-primary disabled placeholder col-6"></a>
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "50vh" }}>
+            <Loader2 className="animate-spin text-primary" size={48} />
           </div>
         ) : products.length === 0 ? (
           <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "50vh" }}>
@@ -114,10 +57,8 @@ const Home = ({ selectedCategory }) => {
           </div>
         ) : (
           <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-            {/* Render the grid of product cards */}
             {products.map((product) => {
               const { id, brand, name, price, available } = product;
-              // Construct the image URL pointing to our Spring Boot image streaming endpoint
               const imageUrl = `http://localhost:8080/api/product/${id}/image`;
 
               return (
@@ -125,22 +66,22 @@ const Home = ({ selectedCategory }) => {
                   <div
                     className="card h-100 shadow-sm border-0 transition-hover"
                     style={{
-                      backgroundColor: available ? "var(--card-bg-clr)" : "#ccc",
-                      overflow: "hidden"
+                      backgroundColor: available ? "var(--card-bg-clr)" : "#f8f9fa",
+                      overflow: "hidden",
+                      borderRadius: "15px"
                     }}
                   >
                     <Link
                       to={`/product/${id}`}
                       style={{ textDecoration: "none", color: "inherit", height: "100%", display: "flex", flexDirection: "column" }}
                     >
-                      {/* Product Image and Favorite Button */}
-                      <div style={{ position: "relative", height: "200px", overflow: "hidden" }}>
+                      <div style={{ position: "relative", height: "220px", overflow: "hidden" }}>
                         <img
                           src={imageUrl}
                           alt={name}
                           onError={(e) => {
                             e.target.onerror = null;
-                            e.target.src = "https://placehold.co/600x400";
+                            e.target.src = "https://placehold.co/600x400?text=No+Image";
                           }}
                           style={{
                             width: "100%",
@@ -150,35 +91,46 @@ const Home = ({ selectedCategory }) => {
                         />
                         <div className="position-absolute top-0 end-0 p-2" style={{ zIndex: 10 }}>
                           <button
-                            className="bg-white rounded-circle p-2 shadow-sm border-0"
-                            style={{ width: "35px", height: "35px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+                            className="bg-white rounded-circle p-2 shadow-sm border-0 d-flex align-items-center justify-content-center"
+                            style={{ width: "38px", height: "38px", cursor: "pointer" }}
                             onClick={(e) => handleToggleFavorite(id, e)}
                           >
-                            <i className={`bi ${product.favorite ? "bi-heart-fill text-danger" : "bi-heart text-danger"}`}></i>
+                            <Heart
+                              size={20}
+                              fill={product.favorite ? "#dc3545" : "none"}
+                              className={product.favorite ? "text-danger" : "text-muted"}
+                            />
                           </button>
                         </div>
                       </div>
 
-                      {/* Card Details */}
                       <div className="card-body d-flex flex-column justify-content-between">
                         <div>
-                          <p className="text-muted small mb-1">{brand}</p>
-                          <h5 className="card-title fw-bold text-truncate mb-2">
-                            {name.toUpperCase()}
+                          <p className="text-muted small mb-1 uppercase tracking-wider">{brand}</p>
+                          <h5 className="card-title fw-bold text-truncate mb-2" style={{ fontSize: "1.1rem" }}>
+                            {name}
                           </h5>
                         </div>
                         <div className="mt-3">
-                          <h5 className="fw-bold mb-3">{"₹" + price}</h5>
+                          <h5 className="fw-bold mb-3 text-primary">{"₹" + price.toLocaleString()}</h5>
                           <button
-                            className="btn btn-primary w-100 py-2 shadow-sm"
-                            onClick={(e) => {
+                            className={`btn ${available ? 'btn-primary' : 'btn-secondary'} w-100 py-2 d-flex align-items-center justify-content-center gap-2`}
+                            onClick={async (e) => {
                               e.preventDefault();
-                              addToCart(product);
-                              addToast("Product added to cart", "success");
+                              if (!isAuthenticated) {
+                                window.location.href = '/login';
+                                return;
+                              }
+                              await addToCart(id, 1);
                             }}
                             disabled={!available}
                           >
-                            {available ? "Add to Cart" : "Out of Stock"}
+                            {available ? (
+                              <>
+                                <ShoppingCart size={18} />
+                                Add to Cart
+                              </>
+                            ) : "Out of Stock"}
                           </button>
                         </div>
                       </div>
@@ -191,64 +143,46 @@ const Home = ({ selectedCategory }) => {
         )}
       </div>
 
-      {/* Persistent Pagination Footer */}
       <footer
         style={{
           position: "fixed",
           bottom: 0,
           left: 0,
           right: 0,
-          backgroundColor: "#f8f9fa",
-          borderTop: "1px solid #ddd",
-          padding: "1rem",
+          backgroundColor: "rgba(255, 255, 255, 0.9)",
+          backdropFilter: "blur(10px)",
+          borderTop: "1px solid rgba(0,0,0,0.05)",
+          padding: "0.75rem",
           display: "flex",
           justifyContent: "center",
           zIndex: 1000,
         }}
       >
         {totalPages > 1 && (
-          <nav
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              gap: "0.5rem",
-              flexWrap: "wrap",
-            }}
-          >
+          <nav className="d-flex align-items-center gap-2">
             <button
+              className="btn btn-outline-primary btn-sm px-3"
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              style={{
-                padding: "0.5rem 1rem",
-                cursor: currentPage === 1 ? "default" : "pointer",
-                opacity: currentPage === 1 ? 0.5 : 1,
-              }}
             >
-              Previous
+              Prev
             </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <button
-                key={page}
-                onClick={() => handlePageChange(page)}
-                style={{
-                  padding: "0.5rem 1rem",
-                  backgroundColor: currentPage === page ? "#007bff" : "#fff",
-                  color: currentPage === page ? "#fff" : "#000",
-                  border: "1px solid #007bff",
-                  cursor: "pointer",
-                }}
-              >
-                {page}
-              </button>
-            ))}
+            <div className="d-flex gap-1 mx-2">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  className={`btn btn-sm ${currentPage === page ? 'btn-primary' : 'btn-light'}`}
+                  onClick={() => handlePageChange(page)}
+                  style={{ width: "32px", height: "32px", padding: 0 }}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
             <button
+              className="btn btn-outline-primary btn-sm px-3"
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              style={{
-                padding: "0.5rem 1rem",
-                cursor: currentPage === totalPages ? "default" : "pointer",
-                opacity: currentPage === totalPages ? 0.5 : 1,
-              }}
             >
               Next
             </button>

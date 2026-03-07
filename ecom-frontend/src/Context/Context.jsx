@@ -46,22 +46,30 @@ export const AppProvider = ({ children }) => {
     try {
       const response = await axios.get("/cart");
       // Map backend structure (cart.items -> item.product + quantity) to frontend structure
-      const mappedCart = response.data.items.map(item => ({
-        ...item.product,
-        quantity: item.quantity
-      }));
-      setCart(mappedCart);
+      if (response.data && response.data.items) {
+        const mappedCart = response.data.items.map(item => ({
+          ...item.product,
+          quantity: item.quantity
+        }));
+        setCart(mappedCart);
+      } else {
+        setCart([]);
+      }
     } catch (error) {
       console.error("Error fetching cart:", error);
+      // If unauthorized or other error, clear local cart state
+      setCart([]);
     }
   };
 
   const addToCart = async (product) => {
     try {
       await axios.post(`/cart/add?productId=${product.id}&quantity=1`);
-      refreshCart();
+      await refreshCart();
+      return true;
     } catch (error) {
       console.error("Error adding to cart:", error);
+      return false;
     }
   };
 
