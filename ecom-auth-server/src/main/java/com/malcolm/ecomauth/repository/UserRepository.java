@@ -1,9 +1,16 @@
 package com.malcolm.ecomauth.repository;
 
-import com.malcolm.ecomauth.model.User;
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
-import java.util.Optional;
+import com.malcolm.ecomauth.model.AppUser;
 
-public interface UserRepository extends JpaRepository<User, Long> {
-    Optional<User> findByUsername(String username);
+public interface UserRepository extends JpaRepository<AppUser, Integer> {
+
+    boolean existsByUsername(String username);
+
+    AppUser findByUsername(String username);
+
+    @Transactional
+    void deleteByUsername(String username);
+
 }
