@@ -5,47 +5,52 @@ A modern, full-stack E-Commerce solution that integrates standard RESTful archit
 ---
 
 ## 🏗️ System Architecture
-
-![System Architecture](./architecture.svg)
-
-The system follows a **hub-and-spoke** architecture where the **Spring Boot Backend** acts as the central data and logic hub.
+The system follows a **distributed service** architecture where the **Ecom Auth Server** manages identities and the **Spring Backend** acts as the core resource hub.
 
 ```mermaid
 graph TD
     subgraph Frontend_Layer [Presentation]
-        React[React Frontend]
+        React[React Frontend :5173]
+    end
+
+    subgraph Security_Layer [Authentication & Identity]
+        AuthSrv["Ecom Auth Server :9000<br/>(OIDC / OAuth2)"]
     end
 
     subgraph AI_Layer [Intelligence & MCP]
-        Claude[Claude Desktop]
-        MCP_Client[MCP Client]
-        MCP_Server[MCP Server]
-        Tools[Postman / AI Chats / Automation]
-    end
-
-    subgraph Core_Layer [Data & Business Logic]
-        SB[Spring Boot Backend]
-        DB[("MySQL Database")]
-    end
-
-    subgraph External_Services [External Cloud]
+        MCP_Client["AI Bridge (MCP Client) :9090"]
+        MCP_Server["Tool Hub (MCP Server) :9091"]
         Groq["Groq API (LLM)"]
     end
 
-    %% Connections
-    React -- REST API --> SB
+    subgraph Core_Layer [Data & Business Logic]
+        SB["Core Backend :8080<br/>(Resource Server)"]
+        DB[("MySQL Database")]
+    end
+
+    %% Security Connections
+    React -- "OIDC Flow" --> AuthSrv
+    MCP_Client -- "Client Credentials" --> AuthSrv
+    
+    %% Service Authentication
+    React -- "JWT Access" --> SB
+    MCP_Client -- "JWT Authenticated SSE" --> MCP_Server
+    
+    %% Target Validation Logic
+    SB -. "Validate Token" .-> AuthSrv
+    MCP_Server -. "Validate Token" .-> AuthSrv
     MCP_Server -- REST API --> SB
     SB -- SQL --> DB
     
-    MCP_Client -- SSE / Basic Auth --> MCP_Server
-    Claude -- SSE / Bridge --> MCP_Server
-    
-    MCP_Client -- HTTPS / JSON --> Groq
-    Tools --> MCP_Client
+    %% AI & Protocol Connections
+    MCP_Client -- "Secure SSE (Protocol)" --> MCP_Server
+    MCP_Client -- "HTTPS / JSON" --> Groq
 
     %% Styling
+    style AuthSrv fill:#1e293b,stroke:#f87171,stroke-width:4px,color:#fff
     style SB fill:#1e293b,stroke:#38bdf8,stroke-width:4px,color:#fff
     style MCP_Server fill:#1e293b,stroke:#10b981,stroke-width:2px,color:#fff
+    style MCP_Client fill:#1e293b,stroke:#a78bfa,stroke-width:2px,color:#fff
     style React fill:#1e293b,stroke:#64748b,stroke-width:2px,color:#fff
     style Groq fill:#f59e0b,stroke:#fcd34d,stroke-width:2px,color:#fff
     style DB fill:#334155,stroke:#94a3b8,stroke-width:2px,color:#fff
@@ -63,10 +68,11 @@ graph TD
 
 | Module | Role | Tech Stack | Port |
 | :--- | :--- | :--- | :--- |
-| **[`ecom-proj`](./ecom-proj)** | **Core Backend Hub** | Spring Boot, MySQL | `8080` (REST) |
-| **[`ecom-ai/mcp-server`](./ecom-ai/mcp-server)** | **MCP Tool Server** | Spring AI, MCP, Basic Auth | `9091` (SSE) |
-| **[`ecom-ai/mcp-client`](./ecom-ai/mcp-client)** | **AI Assistant Client** | Spring AI, Groq, Basic Auth | `9090` (Web) |
-| **[`ecom-frontend`](./ecom-frontend)** | **Interactive Web UI** | React 18, Vite | `5173` |
+| **[`ecom-auth-server`](./ecom-auth-server)** | **Identity Provider** | OIDC, OAuth2, JWT | `9000` |
+| **[`ecom-proj`](./ecom-proj)** | **Core Backend Hub** | Resource Server, MySQL | `8080` |
+| **[`ecom-ai/mcp-server`](./ecom-ai/mcp-server)** | **MCP Tool Server** | Spring AI, OAuth2 Auth Srv | `9091` |
+| **[`ecom-ai/mcp-client`](./ecom-ai/mcp-client)** | **AI Bridge Client** | Spring AI, Groq | `9090` |
+| **[`ecom-frontend`](./ecom-frontend)** | **Interactive Web UI** | React 18, OIDC Client | `5173` |
 
 ---
 
@@ -130,25 +136,31 @@ This will:
 
 #### Option 2: Manual Startup (4 Terminals)
 
-**Terminal 1: Core Backend**
+**Terminal 1: Auth Server**
+```bash
+cd ecom-auth-server
+mvnw spring-boot:run
+```
+
+**Terminal 2: Core Backend**
 ```bash
 cd ecom-proj
 mvnw spring-boot:run
 ```
 
-**Terminal 2: MCP Server**
+**Terminal 3: MCP Server**
 ```bash
 cd ecom-ai/mcp-server
 mvnw spring-boot:run
 ```
 
-**Terminal 3: MCP Client**
+**Terminal 4: AI Bridge (MCP Client)**
 ```bash
 cd ecom-ai/mcp-client
 mvnw spring-boot:run
 ```
 
-**Terminal 4: Frontend**
+**Terminal 5: Frontend**
 ```bash
 cd ecom-frontend
 npm install   # First time only

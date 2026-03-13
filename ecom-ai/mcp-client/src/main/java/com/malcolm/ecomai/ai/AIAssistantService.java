@@ -35,7 +35,8 @@ public class AIAssistantService {
     private int currentModelIndex = 0;
 
     public AIAssistantService(ChatClient.Builder chatClientBuilder,
-            List<ToolCallbackProvider> toolCallbackProviders) {
+            List<ToolCallbackProvider> toolCallbackProviders,
+            org.springframework.ai.chat.memory.ChatMemory chatMemory) {
 
         System.out.println("Discovered " + toolCallbackProviders.size() + " ToolCallbackProviders");
         for (ToolCallbackProvider provider : toolCallbackProviders) {
@@ -49,10 +50,11 @@ public class AIAssistantService {
                 Always use the provided tools to get accurate information about products,
                 stock levels, and user activity.
                 """;
-
-        // Initialize ChatClient with system prompt and registered tools
+ 
+        // Initialize ChatClient with system prompt, memory advisor and registered tools
         this.chatClient = chatClientBuilder
                 .defaultSystem(systemPrompt)
+                .defaultAdvisors(org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor.builder(chatMemory).build())
                 .defaultToolCallbacks(toolCallbackProviders.toArray(new ToolCallbackProvider[0]))
                 .build();
 
@@ -96,23 +98,31 @@ public class AIAssistantService {
      * If a model returns a Rate Limit error (429), it switches to the next
      * available model.
      * 
-     * @param userMessage The user's input
-     * @param model       The preferred model (ignored if we need to rotate)
+     * @param userMessage    The user's input
+     * @param model          The preferred model (ignored if we need to rotate)
+     * @param conversationId The unique identifier for the chat memory session
      * @return The AI response
      */
-    public String chat(String userMessage, String model) {
+    public String chat(String userMessage, String model, String conversationId) {
         int maxRetries = availableModels.isEmpty() ? 1 : availableModels.size();
         int attempts = 0;
+
+        // Ensure we always have a conversationId for the chat memory
+        String activeConversationId = (conversationId != null && !conversationId.isBlank()) 
+            ? conversationId 
+            : "default_session";
 
         while (attempts < maxRetries) {
             String currentModel = availableModels.isEmpty() ? "llama-3.3-70b-versatile"
                     : availableModels.get(currentModelIndex);
 
             try {
-                logger.info("Attempting chat with model: {}", currentModel);
+                logger.info("Attempting chat with model: {} for conversation: {}", currentModel, activeConversationId);
                 return chatClient.prompt()
                         .user(Objects.requireNonNull(userMessage))
                         .options(OpenAiChatOptions.builder().model(currentModel).build())
+                        // Add the conversation ID to the advisors parameters
+                        .advisors(a -> a.param(org.springframework.ai.chat.memory.ChatMemory.CONVERSATION_ID, activeConversationId))
                         .call()
                         .content();
             } catch (Exception e) {

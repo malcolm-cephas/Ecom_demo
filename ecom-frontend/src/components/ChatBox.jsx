@@ -26,6 +26,16 @@ const ChatBox = () => {
     const [selectedPrompt, setSelectedPrompt] = useState(null);
     const [promptArgs, setPromptArgs] = useState({}); // Stores user input for prompt arguments
 
+    // State for chat history persistence
+    const [conversationId, setConversationId] = useState(() => {
+        // Retrieve existing session or create a new one
+        const savedId = localStorage.getItem('chat_session_id');
+        if (savedId) return savedId;
+        const newId = 'session-' + Math.random().toString(36).substring(2, 11);
+        localStorage.setItem('chat_session_id', newId);
+        return newId;
+    });
+
     const messagesEndRef = useRef(null); // Used for auto-scrolling to bottom
 
     /**
@@ -79,7 +89,8 @@ const ChatBox = () => {
             // Send request to Spring AI Client (Proxy)
             const response = await axios.post('http://localhost:9090/api/ai/chat', {
                 message: messageText,
-                model: "llama-3.3-70b-versatile"
+                model: "llama-3.3-70b-versatile",
+                conversationId: conversationId
             });
 
             if (response.data && response.data.response) {

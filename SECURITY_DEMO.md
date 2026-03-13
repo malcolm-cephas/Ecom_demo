@@ -1,93 +1,63 @@
-# How to Demonstrate Spring AI Security
+# 🔐 Unified Security Architecture Demo
 
-This guide explains how to verify that the **Model Context Protocol (MCP)** server is secured with HTTP Basic Authentication.
-
-To protect your AI infrastructure, we have configured the MCP Server (running on port `9091`) to reject any unauthorized connections. Only clients with the correct username and password can access the tools.
+This guide explains how to verify the multi-layered security model implemented across the Intelligent E-Commerce Platform. Our architecture uses **OpenID Connect (OIDC)** for users and **OAuth2 Client Credentials** for service-to-service communication.
 
 ---
 
-## 🚀 1. Start the Application
+## 🏗️ 1. Security Overview
 
-First, ensure all services are running. Open a terminal in the project root and run:
-
-```powershell
-.\run_all.bat
-```
-
-Wait until the logs settle and you see messages indicating the services have started (specifically the MCP Server on port 9091).
+1.  **Identity Provider (Port 9000)**: The central hub for user identities.
+2.  **Resource Server (Port 8080)**: The core backend that validates OIDC tokens.
+3.  **MCP Tool Hub (Port 9091)**: Secured with OAuth2 to protect AI tools.
+4.  **AI Bridge (Port 9090)**: Authenticates with the Tool Hub using Client Credentials.
 
 ---
 
-## 🚫 2. Verify Unauthorized Access (Failure Test)
+## 🚫 2. Test: AI Tool Protection (OAuth2)
 
-Open a new PowerShell window or Command Prompt. Try to access the server **without** credentials. This simulates a malicious actor or unauthenticated user.
+The MCP Server (Port 9091) protects your product inventory from unauthorized AI agents.
 
+### A. Unauthorized Access (Should Fail)
 ```powershell
 curl.exe -v http://localhost:9091/sse
 ```
+**Expected Result:** `401 Unauthorized`. The server requires a Bearer JWT.
 
-**Expected Result:**
-You should see a **`401 Unauthorized`** response.
-
-```
-< HTTP/1.1 401
-< Set-Cookie: JSESSIONID=...
-< WWW-Authenticate: Basic realm="Realm"
-< Content-Type: application/json
-...
-{"status":401,"error":"Unauthorized","message":"Unauthorized","path":"/sse"}
-```
-
-This confirms that the security filter chain is actively blocking requests.
-
----
-
-## ✅ 3. Verify Authorized Access (Success Test)
-
-Now, provide the correct credentials (`client-01` / `ecom-secret-key-123`) using the `-u` flag. This simulates the authorized MCP Client.
-
+### B. Fetching an Access Token
 ```powershell
-curl.exe -v -u client-01:ecom-secret-key-123 http://localhost:9091/sse
+curl.exe -u mcp-client:secret -X POST http://localhost:9091/oauth2/token -d "grant_type=client_credentials&scope=openid"
 ```
+**Expected Result:** A JSON response containing an `"access_token"`.
 
-**Expected Result:**
-You should see a **`200 OK`** response and the connection will stay open (as it is an SSE stream).
-
+### C. Authorized Access (Should Succeed)
+Copy the token from the previous step:
+```powershell
+curl.exe -v -H "Authorization: Bearer YOUR_TOKEN_HERE" http://localhost:9091/sse
 ```
-< HTTP/1.1 200
-< Content-Type: text/event-stream
-< Cache-Control: no-cache
-< Connection: keep-alive
-...
-data: {"jsonrpc":"2.0","method":"notifications/initialized"}
-```
-
-*(Press `Ctrl+C` to stop the stream)*.
+**Expected Result:** `200 OK`. The SSE stream opens successfully.
 
 ---
 
-## 📝 4. Check the Application Logs
+## 👤 3. Test: User Login (OIDC)
 
-The application is configured to log security events. Check the `Logs/mcp_server.log` file.
+The React frontend uses the **Authorization Code Flow with PKCE** to log users in securely.
 
-You will see authorized requests being processed:
-
-```log
-[MCP-SERVER-REQUEST] GET /sse
-Authorization: Basic Y2xpZW50LTAxOmVjb20tc2VjcmV0LWtleS0xMjM=
-```
+1.  **Open Browser**: Go to `http://localhost:5173`.
+2.  **The Shield**: Notice that if you try to access the "Dashboard" or "Add Product", you are redirected to `http://localhost:9000/login`.
+3.  **Authentication**:
+    *   **User**: `admin` / `admin1234`
+    *   **User**: `client` / `client1234`
+4.  **Verification**: After login, check the browser's "Session Storage". You will see an `access_token` issued by the Ecom Auth Server.
 
 ---
 
-## 🔐 Configuration Files
+## 🛡️ 4. Key Configuration Files
 
-The security logic is defined in these two key files:
+| Service | Security File | Protocol |
+| :--- | :--- | :--- |
+| **Auth Server** | `WebSecurityConfig.java` | OIDC / OAuth2 Provider |
+| **Spring Backend** | `SecurityConfig.java` | JWT Resource Server |
+| **MCP Server** | `McpSecurityConfig.java` | OAuth2 Provider & RS |
+| **Frontend** | `main.jsx` | OIDC Client (PKCE) |
 
-1.  **Server Config** (`McpSecurityConfig.java`):
-    *   Enforces `httpBasic()` authentication.
-    *   Defines the user `client-01`.
-
-2.  **Client Config** (`McpClientConfig.java`):
-    *   Adds the `Authorization: Basic ...` header to every request it makes to the server.
-
-Use this guide to demonstrate the end-to-end security flow of your Spring AI application!
+Use this guide to demonstrate that every connection in your ecosystem—from users to AI models—is fully authenticated and authorized.

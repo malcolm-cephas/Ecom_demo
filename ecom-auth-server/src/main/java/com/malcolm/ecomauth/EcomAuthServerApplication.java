@@ -26,24 +26,23 @@ public class EcomAuthServerApplication {
     @Bean
     public CommandLineRunner runner(UserService userService) {
         return args -> {
-            if (userService.search("admin") == null || true) { // just in case search throws but for demo purposes
-                try {
-                    userService.search("admin");
-                } catch (Exception e) {
-                    AppUser admin = new AppUser();
-                    admin.setUsername("admin");
-                    admin.setPassword("admin1234");
-                    admin.setEmail("admin@email.com");
-                    admin.setAppUserRoles(new ArrayList<>(Arrays.asList(AppUserRole.ROLE_ADMIN)));
-                    userService.signup(admin);
+            try {
+                userService.search("admin");
+            } catch (Exception e) {
+                // If admin doesn't exist, create default users
+                AppUser admin = new AppUser();
+                admin.setUsername("admin");
+                admin.setPassword("admin1234");
+                admin.setEmail("admin@email.com");
+                admin.setAppUserRoles(new ArrayList<>(Arrays.asList(AppUserRole.ROLE_ADMIN)));
+                userService.signup(admin);
 
-                    AppUser client = new AppUser();
-                    client.setUsername("client");
-                    client.setPassword("client1234");
-                    client.setEmail("client@email.com");
-                    client.setAppUserRoles(new ArrayList<>(Arrays.asList(AppUserRole.ROLE_CLIENT)));
-                    userService.signup(client);
-                }
+                AppUser client = new AppUser();
+                client.setUsername("client");
+                client.setPassword("client1234");
+                client.setEmail("client@email.com");
+                client.setAppUserRoles(new ArrayList<>(Arrays.asList(AppUserRole.ROLE_CLIENT)));
+                userService.signup(client);
             }
         };
     }

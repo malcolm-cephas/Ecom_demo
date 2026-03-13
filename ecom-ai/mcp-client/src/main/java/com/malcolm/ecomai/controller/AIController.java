@@ -44,7 +44,7 @@ public class AIController {
             String model = request.getModel() != null ? request.getModel() : "llama-3.3-70b-versatile";
 
             // Delegate the chat logic to the AIAssistantService
-            String response = aiAssistantService.chat(request.getMessage(), model);
+            String response = aiAssistantService.chat(request.getMessage(), model, request.getConversationId());
 
             return ResponseEntity.ok(new ChatResponse(response, "success", model));
         } catch (Exception e) {

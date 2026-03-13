@@ -10,4 +10,5 @@ import lombok.AllArgsConstructor;
 public class ChatRequest {
     private String message;
     private String model;
+    private String conversationId;
 }

@@ -9,9 +9,9 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
-import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -29,25 +29,22 @@ public class WebSecurityConfig {
         // Disable CSRF (cross site request forgery)
         http.csrf(csrf -> csrf.disable());
 
-        // No session will be created or used by spring security
-        http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-
-        // Entry points
+        // Standard security for user management and protocol fallbacks
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers("/users/signin").permitAll()
                 .requestMatchers("/users/signup").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
+                .requestMatchers("/oauth2/**").permitAll()
+                .requestMatchers("/login").permitAll()
+                .requestMatchers("/error").permitAll()
                 // Disallow everything else
                 .anyRequest().authenticated());
 
-        // If a user tries to access a resource without having enough permissions
-        http.exceptionHandling(exc -> exc.accessDeniedPage("/login"));
+        // Enable standard form login for the OIDC authorization flow
+        http.formLogin(Customizer.withDefaults());
 
-        // Apply JWT
+        // Apply JWT for existing custom endpoints (optional but maintained for compatibility)
         http.addFilterBefore(new JwtTokenFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
-
-        // Optional, if you want to test the API from a browser
-        // http.httpBasic(Customizer.withDefaults());
 
         return http.build();
     }
