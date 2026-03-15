@@ -3,10 +3,15 @@ package com.malcolm.ecomai.controller;
 import com.malcolm.ecomai.ai.AIAssistantService;
 import com.malcolm.ecomai.ai.ChatRequest;
 import com.malcolm.ecomai.ai.ChatResponse;
+import com.malcolm.ecomai.ai.memory.ChatMetadata;
+import com.malcolm.ecomai.ai.memory.ChatStartResponse;
+import com.malcolm.ecomai.ai.memory.ChatMessage;
 import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * REST Controller for AI-related operations.
@@ -57,6 +62,31 @@ public class AIController {
             return ResponseEntity.internalServerError()
                     .body(new ChatResponse("Error: " + errorMessage, "error", "unknown"));
         }
+    }
+
+    /**
+     * Start a new chat session.
+     */
+    @PostMapping("/memory/start")
+    public ResponseEntity<ChatStartResponse> startChat(@RequestBody ChatRequest request) {
+        String model = request.getModel() != null ? request.getModel() : "llama-3.3-70b-versatile";
+        return ResponseEntity.ok(aiAssistantService.createChatWithResponse(request.getMessage(), model));
+    }
+
+    /**
+     * List all chat sessions.
+     */
+    @GetMapping("/memory/chats")
+    public ResponseEntity<List<ChatMetadata>> listChats() {
+        return ResponseEntity.ok(aiAssistantService.getAllChats());
+    }
+
+    /**
+     * Get message history for a specific chat.
+     */
+    @GetMapping("/memory/chat/{chatId}")
+    public ResponseEntity<List<ChatMessage>> getChatHistory(@PathVariable String chatId) {
+        return ResponseEntity.ok(aiAssistantService.getChatMessages(chatId));
     }
 
     /**

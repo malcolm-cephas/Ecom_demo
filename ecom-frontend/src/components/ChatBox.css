@@ -287,3 +287,30 @@
     color: var(--bs-primary);
     border-color: var(--bs-primary);
 }
+
+/* History List Styles */
+.history-list {
+    animation: fadeIn 0.3s ease;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.history-item {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid #dee2e6;
+    background-color: #fff;
+}
+
+.history-item:hover {
+    transform: translateY(-2px);
+    border-color: var(--bs-primary);
+    background-color: #f8faff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.history-item.active-chat {
+    border-color: var(--bs-primary);
+    background-color: #eef6ff;
+    border-left: 4px solid var(--bs-primary);
+}

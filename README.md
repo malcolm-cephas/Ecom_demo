@@ -263,10 +263,15 @@ To use with Claude Desktop, add this to your `%APPDATA%\Claude\claude_desktop_co
 
 ---
 
-## 📚 Related Projects
+## 📚 Related Projects/Articles
 
 - [SpringAI_Test](https://github.com/malcolm-cephas/SpringAI_Test) - MCP Client/Server Architecture
 - [opencode-antigravity-autopilot](https://github.com/Gooseware/opencode-antigravity-autopilot) - Model Switching Inspiration
+-  [Building an AI Chat with Memory (Context) using Spring AI and Angular](https://loiane.com/2025/10/building-ai-chat-with-memory-using-spring-ai-and-angular/)
+- [Chat Memory in Spring AI](https://www.baeldung.com/spring-ai-chat-memory)
+- [Securing MCP Servers with Spring AI](https://spring.io/blog/2025/09/30/spring-ai-mcp-server-security)
+- [Securing Spring AI MCP Servers With OAuth2](https://www.baeldung.com/spring-ai-mcp-servers-oauth2)
+
 
 ---
 

@@ -10,11 +10,13 @@ import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
+import com.malcolm.ecomai.ai.memory.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Service that handles interactions with the AI model.
@@ -34,9 +36,18 @@ public class AIAssistantService {
     // Index to track current model for round-robin rotation on failure
     private int currentModelIndex = 0;
 
+    private final ChatMetadataRepository chatMetadataRepository;
+    
+    private static final String DEFAULT_USER_ID = "anonymous";
+    private static final String DESCRIPTION_PROMPT = 
+        "Generate a chat description based on the message, limiting the description to 30 characters: ";
+
     public AIAssistantService(ChatClient.Builder chatClientBuilder,
             List<ToolCallbackProvider> toolCallbackProviders,
-            org.springframework.ai.chat.memory.ChatMemory chatMemory) {
+            org.springframework.ai.chat.memory.ChatMemory chatMemory,
+            ChatMetadataRepository chatMetadataRepository) {
+
+        this.chatMetadataRepository = chatMetadataRepository;
 
         System.out.println("Discovered " + toolCallbackProviders.size() + " ToolCallbackProviders");
         for (ToolCallbackProvider provider : toolCallbackProviders) {
@@ -111,6 +122,11 @@ public class AIAssistantService {
         String activeConversationId = (conversationId != null && !conversationId.isBlank()) 
             ? conversationId 
             : "default_session";
+        
+        // Validate if conversationId exists in metadata (except for default_session)
+        if (!activeConversationId.equals("default_session") && !chatMetadataRepository.chatIdExists(activeConversationId)) {
+            logger.warn("Chat ID {} does not exist in metadata. It might be an old session.", activeConversationId);
+        }
 
         while (attempts < maxRetries) {
             String currentModel = availableModels.isEmpty() ? "llama-3.3-70b-versatile"
@@ -126,8 +142,7 @@ public class AIAssistantService {
                         .call()
                         .content();
             } catch (Exception e) {
-                // Check for rate limit error (429) or related messages ("probation", "rate
-                // limit")
+                // Check for rate limit error (429) or related messages ("probation", "rate limit")
                 if (e.getMessage() != null
                         && (e.getMessage().contains("429") || e.getMessage().toLowerCase().contains("probation")
                                 || e.getMessage().toLowerCase().contains("rate limit"))) {
@@ -141,6 +156,34 @@ public class AIAssistantService {
             }
         }
         throw new RuntimeException("All available models failed due to rate limits.");
+    }
+
+    public ChatStartResponse createChatWithResponse(String message, String model) {
+        String description = this.generateDescription(message, model);
+        String chatId = this.chatMetadataRepository.createChat(DEFAULT_USER_ID, description);
+        String response = this.chat(message, model, chatId);
+        return new ChatStartResponse(chatId, response, description);
+    }
+
+    public List<ChatMetadata> getAllChats() {
+        return this.chatMetadataRepository.getAllChatsForUser(DEFAULT_USER_ID);
+    }
+
+    public List<ChatMessage> getChatMessages(String chatId) {
+        return this.chatMetadataRepository.getChatMessages(chatId);
+    }
+
+    private String generateDescription(String message, String model) {
+        try {
+            return this.chatClient.prompt()
+                    .user(DESCRIPTION_PROMPT + message)
+                    .options(OpenAiChatOptions.builder().model(model).build())
+                    .call()
+                    .content();
+        } catch (Exception e) {
+            logger.error("Failed to generate description", e);
+            return "New Chat";
+        }
     }
 
     private synchronized void rotateModel() {

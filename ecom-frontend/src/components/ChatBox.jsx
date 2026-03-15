@@ -10,50 +10,69 @@ import './ChatBox.css';
  * Supports standard chat and specialized MCP Prompt execution.
  */
 const ChatBox = () => {
-    const [isOpen, setIsOpen] = useState(false); // Validates if the chat window is visible
-
-    // Stores the history of chat messages (user + bot)
+    const [isOpen, setIsOpen] = useState(false);
+    const [view, setView] = useState('chat'); // 'chat', 'history', 'prompts'
+    
+    // Stores the history of chat messages for the current session
     const [messages, setMessages] = useState([
         { text: "Hi there! I'm your AI assistant. How can I help you today?", isUser: false }
     ]);
 
     const [inputValue, setInputValue] = useState("");
-    const [isLoading, setIsLoading] = useState(false); // Shows "Thinking..." state
+    const [isLoading, setIsLoading] = useState(false);
 
-    // State for MCP Prompts (templates)
-    const [showPrompts, setShowPrompts] = useState(false);
+    // Chat History states
+    const [chats, setChats] = useState([]);
+    const [currentChatId, setCurrentChatId] = useState(null);
+
+    // MCP Prompts states
     const [prompts, setPrompts] = useState([]);
     const [selectedPrompt, setSelectedPrompt] = useState(null);
-    const [promptArgs, setPromptArgs] = useState({}); // Stores user input for prompt arguments
+    const [promptArgs, setPromptArgs] = useState({});
 
-    // State for chat history persistence
-    const [conversationId, setConversationId] = useState(() => {
-        // Retrieve existing session or create a new one
-        const savedId = localStorage.getItem('chat_session_id');
-        if (savedId) return savedId;
-        const newId = 'session-' + Math.random().toString(36).substring(2, 11);
-        localStorage.setItem('chat_session_id', newId);
-        return newId;
-    });
+    const messagesEndRef = useRef(null);
 
-    const messagesEndRef = useRef(null); // Used for auto-scrolling to bottom
-
-    /**
-     * Toggles the visibility of the chat window and fetches the list of available
-     * MCP prompts from the backend if the chat window is opened and the list is
-     * empty.
-     */
     const toggleChat = () => {
         setIsOpen(!isOpen);
-        if (!isOpen && prompts.length === 0) {
-            fetchPrompts();
+        if (!isOpen) {
+            fetchChats();
         }
     };
 
-    // Fetches the list of available MCP prompts from our backend
+    const fetchChats = async () => {
+        try {
+            const response = await axios.get('http://localhost:9090/api/ai/memory/chats');
+            if (response.data) {
+                setChats(response.data);
+            }
+        } catch (error) {
+            console.error("Error fetching chats:", error);
+        }
+    };
+
+    const fetchChatHistory = async (chatId) => {
+        setIsLoading(true);
+        try {
+            const response = await axios.get(`http://localhost:9090/api/ai/memory/chat/${chatId}`);
+            if (response.data) {
+                // Map backend ChatMessage to frontend format
+                const history = response.data.map(m => ({
+                    text: m.content,
+                    isUser: m.type === 'USER'
+                }));
+                setMessages(history);
+                setCurrentChatId(chatId);
+                setView('chat');
+            }
+        } catch (error) {
+            console.error("Error fetching history:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const fetchPrompts = async () => {
         try {
-            // This endpoint proxies the McpSyncClient.listPrompts() call in Java
             const response = await axios.get('http://localhost:9090/api/ai/prompts');
             if (response.data && response.data.prompts) {
                 setPrompts(response.data.prompts);
@@ -71,44 +90,54 @@ const ChatBox = () => {
         scrollToBottom();
     }, [messages, isOpen]);
 
-    /**
-     * Sends a message to the AI backend and appends the response.
-     * @param {string} text - Optional text to send (overrides inputValue if provided)
-     */
     const handleSendMessage = async (text = null) => {
         const messageText = text || inputValue;
         if (!messageText.trim()) return;
 
-        // Add user message to UI immediately
         const userMessage = { text: messageText, isUser: true };
         setMessages(prev => [...prev, userMessage]);
         setInputValue("");
         setIsLoading(true);
 
         try {
-            // Send request to Spring AI Client (Proxy)
-            const response = await axios.post('http://localhost:9090/api/ai/chat', {
-                message: messageText,
-                model: "llama-3.3-70b-versatile",
-                conversationId: conversationId
-            });
-
-            if (response.data && response.data.response) {
-                const botMessage = { text: response.data.response, isUser: false };
-                setMessages(prev => [...prev, botMessage]);
+            let response;
+            if (!currentChatId) {
+                // If no chat is active, start a new one
+                response = await axios.post('http://localhost:9090/api/ai/memory/start', {
+                    message: messageText,
+                    model: "llama-3.3-70b-versatile"
+                });
+                if (response.data && response.data.chatId) {
+                    setCurrentChatId(response.data.chatId);
+                    setMessages(prev => [...prev, { text: response.data.message, isUser: false }]);
+                    // Refresh chat list to include the new one
+                    fetchChats();
+                }
             } else {
-                setMessages(prev => [...prev, { text: "Sorry, I didn't get a valid response.", isUser: false }]);
+                // Continue existing chat
+                response = await axios.post('http://localhost:9090/api/ai/chat', {
+                    message: messageText,
+                    model: "llama-3.3-70b-versatile",
+                    conversationId: currentChatId
+                });
+                if (response.data && response.data.response) {
+                    setMessages(prev => [...prev, { text: response.data.response, isUser: false }]);
+                }
             }
         } catch (error) {
             console.error("Chat error:", error);
-            setMessages(prev => [...prev, { text: "Network error. Please make sure the AI service is running on port 9090.", isUser: false }]);
+            setMessages(prev => [...prev, { text: "Network error. AI service might be down.", isUser: false }]);
         } finally {
             setIsLoading(false);
         }
     };
 
-    // Called when a user clicks a prompt in the UI
-    // Sets up the form fields based on the arguments the prompt requires
+    const startNewChat = () => {
+        setCurrentChatId(null);
+        setMessages([{ text: "New conversation started. How can I help you?", isUser: false }]);
+        setView('chat');
+    };
+
     const handlePromptSelect = (prompt) => {
         setSelectedPrompt(prompt);
         const initialArgs = {};
@@ -120,27 +149,16 @@ const ChatBox = () => {
         setPromptArgs(initialArgs);
     };
 
-    // Executes the selected prompt with the filled-in arguments
     const handleUsePrompt = async () => {
         setIsLoading(true);
         try {
-            // Construct query string for args (e.g., ?recipient=Dad&budget=5000)
             const queryParams = new URLSearchParams(promptArgs).toString();
-
-            // Call the execution endpoint
             const response = await axios.get(`http://localhost:9090/api/ai/prompts/${selectedPrompt.name}?${queryParams}`);
-
-            // The result comes back as a list of messages (text content)
-            // We take that content and "send" it as if the user typed it
             if (response.data && response.data.messages && response.data.messages[0]) {
                 const promptContent = response.data.messages[0].content.text;
-
-                // Reset UI state
-                setShowPrompts(false);
+                setView('chat');
                 setSelectedPrompt(null);
                 setPromptArgs({});
-
-                // Submit message to chat
                 handleSendMessage(promptContent);
             }
         } catch (error) {
@@ -171,18 +189,43 @@ const ChatBox = () => {
                 <div className="chat-window card shadow-lg">
                     <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
                         <div className="d-flex align-items-center gap-2">
-                            {showPrompts ? (
-                                <button className="btn btn-link text-white p-0" onClick={() => { setShowPrompts(false); setSelectedPrompt(null); }}>
+                            {view !== 'chat' ? (
+                                <button className="btn btn-link text-white p-0" onClick={() => setView('chat')}>
                                     <FaChevronLeft size={18} />
                                 </button>
                             ) : <FaRobot size={20} />}
-                            <span className="fw-bold fs-5">{showPrompts ? 'MCP Prompts' : 'AI Assistant'}</span>
+                            <span className="fw-bold fs-5">
+                                {view === 'history' ? 'Chat History' : view === 'prompts' ? 'MCP Prompts' : 'AI Assistant'}
+                            </span>
                         </div>
-                        <span className="badge bg-success rounded-pill">Online</span>
+                        <div className="d-flex gap-2">
+                            <button className="btn btn-sm btn-outline-light border-0" onClick={() => { setView('history'); fetchChats(); }} title="History">
+                                <FaComments />
+                            </button>
+                            <button className="btn btn-sm btn-outline-light border-0" onClick={startNewChat} title="New Chat">
+                                <FaMagic />
+                            </button>
+                        </div>
                     </div>
 
                     <div className="card-body chat-messages p-3">
-                        {showPrompts ? (
+                        {view === 'history' ? (
+                            <div className="history-list">
+                                <p className="text-muted small mb-3">Your recent conversations:</p>
+                                {chats.length === 0 ? <p className="text-center py-4">No recent chats found.</p> : (
+                                    chats.map(chat => (
+                                        <div key={chat.id} 
+                                             className={`history-item card mb-2 p-2 shadow-sm ${currentChatId === chat.id ? 'active-chat' : ''}`} 
+                                             onClick={() => fetchChatHistory(chat.id)}>
+                                            <div className="d-flex justify-content-between align-items-start">
+                                                <strong>{chat.description || 'Untitled Chat'}</strong>
+                                                <small className="text-muted" style={{fontSize: '0.7rem'}}>ID: {chat.id.substring(0, 8)}</small>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        ) : view === 'prompts' ? (
                             <div className="prompts-list">
                                 {!selectedPrompt ? (
                                     <>
@@ -249,8 +292,8 @@ const ChatBox = () => {
                     <div className="card-footer p-3 bg-white border-top">
                         <div className="input-group">
                             <button
-                                className={`btn btn-outline-secondary border-end-0 ${showPrompts ? 'active' : ''}`}
-                                onClick={() => setShowPrompts(!showPrompts)}
+                                className={`btn btn-outline-secondary border-end-0 ${view === 'prompts' ? 'active' : ''}`}
+                                onClick={() => { if (view === 'prompts') setView('chat'); else { setView('prompts'); fetchPrompts(); } }}
                                 title="Use MCP Prompts"
                             >
                                 <FaMagic />
@@ -262,13 +305,13 @@ const ChatBox = () => {
                                 value={inputValue}
                                 onChange={(e) => setInputValue(e.target.value)}
                                 onKeyPress={handleKeyPress}
-                                disabled={isLoading || showPrompts}
+                                disabled={isLoading || view !== 'chat'}
                             />
                             <button
                                 className="btn btn-primary border-start-0"
                                 type="button"
                                 onClick={() => handleSendMessage()}
-                                disabled={isLoading || showPrompts || !inputValue.trim()}
+                                disabled={isLoading || view !== 'chat' || !inputValue.trim()}
                             >
                                 <FaPaperPlane />
                             </button>

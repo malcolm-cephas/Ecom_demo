@@ -15,7 +15,7 @@ import java.util.Objects;
 public class AIConfiguration {
 
     @Bean
-    public JdbcChatMemoryRepository chatMemoryRepository(JdbcTemplate jdbcTemplate) {
+    public JdbcChatMemoryRepository jdbcChatMemoryRepository(JdbcTemplate jdbcTemplate) {
         return JdbcChatMemoryRepository.builder()
                 .jdbcTemplate(jdbcTemplate)
                 .dialect(new MysqlChatMemoryRepositoryDialect())
@@ -23,9 +23,9 @@ public class AIConfiguration {
     }
 
     @Bean
-    public ChatMemory chatMemory(JdbcChatMemoryRepository chatMemoryRepository) {
+    public ChatMemory chatMemory(JdbcChatMemoryRepository jdbcChatMemoryRepository) {
         return MessageWindowChatMemory.builder()
-                .chatMemoryRepository(chatMemoryRepository)
+                .chatMemoryRepository(jdbcChatMemoryRepository)
                 .maxMessages(10) // Remember the last 10 messages
                 .build();
     }

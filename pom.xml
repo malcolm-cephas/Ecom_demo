@@ -13,6 +13,8 @@
     <modules>
         <module>ecom-proj</module>
         <module>ecom-auth-server</module>
+        <module>ecom-ai/mcp-client</module>
+        <module>ecom-ai/mcp-server</module>
     </modules>
 
 </project>
