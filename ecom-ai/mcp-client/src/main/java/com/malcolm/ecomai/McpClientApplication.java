@@ -14,4 +14,5 @@ public class McpClientApplication {
 
         SpringApplication.run(McpClientApplication.class, args);
     }
+
 }
