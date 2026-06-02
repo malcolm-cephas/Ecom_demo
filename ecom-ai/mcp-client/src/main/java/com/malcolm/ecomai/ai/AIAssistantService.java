@@ -11,12 +11,10 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import com.malcolm.ecomai.ai.memory.*;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 
 /**
  * Service that handles interactions with the AI model.
@@ -171,6 +169,14 @@ public class AIAssistantService {
 
     public List<ChatMessage> getChatMessages(String chatId) {
         return this.chatMetadataRepository.getChatMessages(chatId);
+    }
+
+    public void updateChatDescription(String chatId, String description) {
+        this.chatMetadataRepository.updateChatDescription(chatId, description);
+    }
+
+    public void deleteChat(String chatId) {
+        this.chatMetadataRepository.deleteChat(chatId);
     }
 
     private String generateDescription(String message, String model) {

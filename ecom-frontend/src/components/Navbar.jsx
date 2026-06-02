@@ -173,17 +173,17 @@ const Navbar = ({ onSelectCategory, onSearch }) => {
                   onChange={(e) => setInput(e.target.value)}
                 />
                 {showSearchResults && (
-                  <ul className="list-group position-absolute w-100 mt-2 shadow-sm border-0" style={{ zIndex: 1000 }}>
+                  <ul className="search-results-list position-absolute w-100 mt-2 shadow-sm border-0" style={{ zIndex: 1000 }}>
                     {searchResults.length > 0 ? (
                       searchResults.map((result) => (
-                        <li key={result.id} className="list-group-item list-group-item-action border-0">
+                        <li key={result.id} className="search-results-item list-group-item-action border-0">
                           <Link to={`/product/${result.id}`} className="text-decoration-none text-dark d-block">
                             {result.name}
                           </Link>
                         </li>
                       ))
                     ) : noResults && (
-                      <li className="list-group-item border-0 text-muted small">No products found</li>
+                      <li className="search-results-item border-0 text-muted small">No products found</li>
                     )}
                   </ul>
                 )}

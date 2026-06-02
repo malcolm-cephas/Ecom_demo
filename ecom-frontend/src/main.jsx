@@ -14,7 +14,7 @@ const authConfig = {
   storage: 'session', // Avoid persistent local tokens to prevent auto-login after logout
   onRefreshTokenExpire: (event) => window.confirm('Session expired. Refresh to login again?') && event.login(),
   logoutEndpoint: 'http://localhost:9000/connect/logout',
-  logoutRedirect: 'http://localhost:5173/'
+  logoutRedirect: 'http://localhost:5173/login'
 };
 
 import { Toaster } from 'react-hot-toast';

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import { FaRobot, FaPaperPlane, FaTimes, FaComments, FaUser, FaMagic, FaChevronLeft } from 'react-icons/fa';
+import { FaRobot, FaPaperPlane, FaTimes, FaComments, FaUser, FaMagic, FaChevronLeft, FaEdit, FaTrash, FaCheck } from 'react-icons/fa';
 import ReactMarkdown from 'react-markdown';
 import './ChatBox.css';
 
@@ -24,6 +24,8 @@ const ChatBox = () => {
     // Chat History states
     const [chats, setChats] = useState([]);
     const [currentChatId, setCurrentChatId] = useState(null);
+    const [editingChatId, setEditingChatId] = useState(null);
+    const [editingDescription, setEditingDescription] = useState("");
 
     // MCP Prompts states
     const [prompts, setPrompts] = useState([]);
@@ -138,6 +140,45 @@ const ChatBox = () => {
         setView('chat');
     };
 
+    const handleEditClick = (e, chat) => {
+        e.stopPropagation();
+        setEditingChatId(chat.id);
+        setEditingDescription(chat.description || "Untitled Chat");
+    };
+
+    const handleSaveDescription = async (e, chatId) => {
+        e.stopPropagation();
+        if (!editingDescription.trim()) return;
+        try {
+            await axios.put(`http://localhost:9090/api/ai/memory/chat/${chatId}/description`, {
+                description: editingDescription
+            });
+            setEditingChatId(null);
+            fetchChats();
+        } catch (error) {
+            console.error("Error updating chat description:", error);
+        }
+    };
+
+    const handleDeleteChat = async (e, chatId) => {
+        e.stopPropagation();
+        if (!window.confirm("Are you sure you want to delete this chat session?")) return;
+        try {
+            await axios.delete(`http://localhost:9090/api/ai/memory/chat/${chatId}`);
+            if (currentChatId === chatId) {
+                startNewChat();
+            }
+            fetchChats();
+        } catch (error) {
+            console.error("Error deleting chat:", error);
+        }
+    };
+
+    const handleCancelEdit = (e) => {
+        e.stopPropagation();
+        setEditingChatId(null);
+    };
+
     const handlePromptSelect = (prompt) => {
         setSelectedPrompt(prompt);
         const initialArgs = {};
@@ -216,11 +257,40 @@ const ChatBox = () => {
                                     chats.map(chat => (
                                         <div key={chat.id} 
                                              className={`history-item card mb-2 p-2 shadow-sm ${currentChatId === chat.id ? 'active-chat' : ''}`} 
-                                             onClick={() => fetchChatHistory(chat.id)}>
-                                            <div className="d-flex justify-content-between align-items-start">
-                                                <strong>{chat.description || 'Untitled Chat'}</strong>
-                                                <small className="text-muted" style={{fontSize: '0.7rem'}}>ID: {chat.id.substring(0, 8)}</small>
-                                            </div>
+                                             onClick={() => editingChatId !== chat.id && fetchChatHistory(chat.id)}>
+                                            {editingChatId === chat.id ? (
+                                                <div className="d-flex align-items-center gap-2 w-100">
+                                                    <input 
+                                                        type="text" 
+                                                        className="form-control form-control-sm flex-grow-1"
+                                                        value={editingDescription}
+                                                        onChange={(e) => setEditingDescription(e.target.value)}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        autoFocus
+                                                    />
+                                                    <button className="btn btn-sm btn-success p-1 d-flex align-items-center justify-content-center" onClick={(e) => handleSaveDescription(e, chat.id)} title="Save">
+                                                        <FaCheck size={12} />
+                                                    </button>
+                                                    <button className="btn btn-sm btn-secondary p-1 d-flex align-items-center justify-content-center" onClick={handleCancelEdit} title="Cancel">
+                                                        <FaTimes size={12} />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="d-flex justify-content-between align-items-center w-100">
+                                                    <div className="d-flex flex-column text-truncate" style={{ maxWidth: '75%' }}>
+                                                        <strong className="text-truncate">{chat.description || 'Untitled Chat'}</strong>
+                                                        <small className="text-muted" style={{fontSize: '0.65rem'}}>ID: {chat.id.substring(0, 8)}</small>
+                                                    </div>
+                                                    <div className="d-flex gap-2">
+                                                        <button className="btn btn-link btn-sm text-muted p-1" onClick={(e) => handleEditClick(e, chat)} title="Rename">
+                                                            <FaEdit size={14} />
+                                                        </button>
+                                                        <button className="btn btn-link btn-sm text-danger p-1" onClick={(e) => handleDeleteChat(e, chat.id)} title="Delete">
+                                                            <FaTrash size={14} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     ))
                                 )}

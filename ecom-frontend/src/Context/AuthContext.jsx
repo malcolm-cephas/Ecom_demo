@@ -4,7 +4,7 @@ import useUserStore from '../store/useUserStore';
 import useCartStore from '../store/useCartStore';
 
 export const useAuth = () => {
-    const { token, idToken, login, logOut, idTokenData, error, loading: oauthLoading } = useContext(AuthContext);
+    const { token, idToken, login, logOut, idTokenData, error, loginInProgress } = useContext(AuthContext);
     const { setAuth, clearAuth, user: storeUser, isAuthenticated: storeAuth, token: storeToken } = useUserStore();
     const { fetchCart, setCart } = useCartStore();
 
@@ -12,11 +12,11 @@ export const useAuth = () => {
         if (token) {
             setAuth(token, idTokenData);
             fetchCart(); // Fetch personalized cart on login
-        } else if (!oauthLoading && !token) {
+        } else if (!loginInProgress && !token) {
             clearAuth();
             setCart({ items: [] });
         }
-    }, [token, idTokenData, oauthLoading, setAuth, clearAuth, fetchCart, setCart]);
+    }, [token, idTokenData, loginInProgress, setAuth, clearAuth, fetchCart, setCart]);
 
     const handleLogout = () => {
         // Explicitly clear our local zustand states first
@@ -41,7 +41,7 @@ export const useAuth = () => {
         login: login,
         logout: handleLogout,
         isAuthenticated: storeAuth || (!!token || !!idToken),
-        loading: oauthLoading,
+        loading: loginInProgress,
         token: storeToken || token,
         error: error
     };

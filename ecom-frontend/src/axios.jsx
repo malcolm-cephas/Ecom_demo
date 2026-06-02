@@ -1,4 +1,5 @@
 import axios from "axios";
+import useUserStore from "./store/useUserStore";
 
 // Create a centralized Axios instance for all HTTP requests to the backend
 // This allows us to configure base URLs and interceptors in one place
@@ -11,43 +12,49 @@ const API = axios.create({
 
 API.interceptors.request.use(
   (config) => {
-    // Try to find the token in any storage with any recognized key
-    const storageKeys = ['ROCP_token', 'token', 'access_token', 'id_token'];
-    let rawToken = null;
+    // 1. Try to get token from state management first (Zustand)
+    let token = useUserStore.getState().token;
 
-    // Search through common keys in both storage locations
-    for (const key of storageKeys) {
-      rawToken = sessionStorage.getItem(key) || localStorage.getItem(key);
-      if (rawToken) break;
-    }
+    // 2. Fallback to localStorage / sessionStorage if store is not populated yet
+    if (!token) {
+      const storageKeys = ['ROCP_token', 'token', 'access_token', 'id_token'];
+      let rawToken = null;
 
-    // Fallback: search for ANY key that LOOKS like a ROCP token key
-    if (!rawToken) {
-      const allStorages = [sessionStorage, localStorage];
-      for (const storage of allStorages) {
-        for (let i = 0; i < storage.length; i++) {
-          const key = storage.key(i);
-          if (key && (key.includes('token') || key.includes('access_token'))) {
-            rawToken = storage.getItem(key);
-            break;
-          }
-        }
+      // Search through common keys in both storage locations
+      for (const key of storageKeys) {
+        rawToken = sessionStorage.getItem(key) || localStorage.getItem(key);
         if (rawToken) break;
       }
+
+      // Fallback: search for ANY key that LOOKS like a ROCP token key
+      if (!rawToken) {
+        const allStorages = [sessionStorage, localStorage];
+        for (const storage of allStorages) {
+          for (let i = 0; i < storage.length; i++) {
+            const key = storage.key(i);
+            if (key && (key.includes('token') || key.includes('access_token'))) {
+              rawToken = storage.getItem(key);
+              break;
+            }
+          }
+          if (rawToken) break;
+        }
+      }
+
+      if (rawToken) {
+        try {
+          const tokenObj = JSON.parse(rawToken);
+          token = tokenObj.token || tokenObj.access_token || tokenObj.accessToken || (typeof tokenObj === 'string' ? tokenObj : rawToken);
+        } catch (e) {
+          token = rawToken;
+        }
+      }
     }
 
-    if (rawToken) {
-      let token = rawToken;
-      try {
-        const tokenObj = JSON.parse(rawToken);
-        token = tokenObj.token || tokenObj.access_token || tokenObj.accessToken || (typeof tokenObj === 'string' ? tokenObj : rawToken);
-      } catch (e) { /* use as raw string */ }
-
-      if (typeof token === 'string' && token.length > 10) {
-        // Clean up quotes if present
-        token = token.replace(/^"(.*)"$/, '$1');
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+    if (token && typeof token === 'string' && token.length > 10) {
+      // Clean up quotes if present
+      token = token.replace(/^"(.*)"$/, '$1');
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },

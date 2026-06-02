@@ -7,7 +7,6 @@ import com.malcolm.ecomai.ai.memory.ChatMetadata;
 import com.malcolm.ecomai.ai.memory.ChatStartResponse;
 import com.malcolm.ecomai.ai.memory.ChatMessage;
 import io.modelcontextprotocol.client.McpSyncClient;
-import io.modelcontextprotocol.spec.McpSchema;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -87,6 +86,28 @@ public class AIController {
     @GetMapping("/memory/chat/{chatId}")
     public ResponseEntity<List<ChatMessage>> getChatHistory(@PathVariable String chatId) {
         return ResponseEntity.ok(aiAssistantService.getChatMessages(chatId));
+    }
+
+    /**
+     * Update chat description.
+     */
+    @PutMapping("/memory/chat/{chatId}/description")
+    public ResponseEntity<Void> updateChatDescription(@PathVariable String chatId, @RequestBody java.util.Map<String, String> body) {
+        String description = body.get("description");
+        if (description == null || description.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        aiAssistantService.updateChatDescription(chatId, description);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Delete a chat session and its messages.
+     */
+    @DeleteMapping("/memory/chat/{chatId}")
+    public ResponseEntity<Void> deleteChat(@PathVariable String chatId) {
+        aiAssistantService.deleteChat(chatId);
+        return ResponseEntity.ok().build();
     }
 
     /**

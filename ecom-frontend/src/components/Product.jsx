@@ -1,7 +1,7 @@
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import useCartStore from "../store/useCartStore";
-import useUserStore from "../store/useUserStore";
+import { useAuth } from "../Context/AuthContext";
 import useProductStore from "../store/useProductStore";
 import axios from "../axios";
 import {
@@ -20,7 +20,7 @@ import { toast } from "react-hot-toast";
 const Product = () => {
   const { id } = useParams();
   const { addToCart, removeFromCart } = useCartStore();
-  const { isAuthenticated } = useUserStore();
+  const { isAuthenticated } = useAuth();
   const { toggleFavorite } = useProductStore();
   const [product, setProduct] = useState(null);
   const navigate = useNavigate();

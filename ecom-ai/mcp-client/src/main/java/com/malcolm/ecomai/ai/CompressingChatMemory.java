@@ -4,6 +4,7 @@ import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.memory.repository.jdbc.JdbcChatMemoryRepository;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -24,11 +25,11 @@ public class CompressingChatMemory implements ChatMemory {
 
     @Override
     public void add(String conversationId, List<Message> messages) {
-        // Persist new messages to JDBC
-        messages.forEach(m -> repository.add(conversationId, m));
-
-        // Retrieve current history to check if threshold is reached
-        List<Message> history = repository.get(conversationId, 100); 
+        // Retrieve current history
+        List<Message> history = new ArrayList<>(repository.findByConversationId(conversationId));
+        
+        // Append new messages
+        history.addAll(messages);
 
         if (history.size() >= threshold) {
             // Keep the last 5 messages for immediate context (continuity)
@@ -40,20 +41,24 @@ public class CompressingChatMemory implements ChatMemory {
             
             Message summaryMessage = new SystemMessage("PREVIOUS CONVERSATION CONTEXT (Compressed):\n" + summaryText);
 
-            // Clear old history and replace with [Summary] + [Recent 5]
-            repository.clear(conversationId);
-            repository.add(conversationId, summaryMessage);
-            recentMessages.forEach(m -> repository.add(conversationId, m));
+            // Replace history with [Summary] + [Recent 5]
+            List<Message> newHistory = new ArrayList<>();
+            newHistory.add(summaryMessage);
+            newHistory.addAll(recentMessages);
+            
+            repository.saveAll(conversationId, newHistory);
+        } else {
+            repository.saveAll(conversationId, history);
         }
     }
 
     @Override
-    public List<Message> get(String conversationId, int lastN) {
-        return repository.get(conversationId, lastN);
+    public List<Message> get(String conversationId) {
+        return repository.findByConversationId(conversationId);
     }
 
     @Override
     public void clear(String conversationId) {
-        repository.clear(conversationId);
+        repository.deleteByConversationId(conversationId);
     }
 }

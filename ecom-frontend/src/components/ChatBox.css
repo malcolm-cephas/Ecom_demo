@@ -314,3 +314,26 @@
     background-color: #eef6ff;
     border-left: 4px solid var(--bs-primary);
 }
+
+.history-item .btn-link {
+    text-decoration: none;
+    opacity: 0.6;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.history-item .btn-link:hover {
+    opacity: 1;
+    transform: scale(1.15);
+}
+
+.history-item input.form-control-sm {
+    font-size: 0.85rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+}
+
+.history-item input.form-control-sm:focus {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}

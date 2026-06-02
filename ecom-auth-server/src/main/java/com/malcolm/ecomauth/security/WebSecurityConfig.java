@@ -14,6 +14,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
@@ -28,6 +31,7 @@ public class WebSecurityConfig {
 
         // Disable CSRF (cross site request forgery)
         http.csrf(csrf -> csrf.disable());
+        http.cors(Customizer.withDefaults());
 
         // Standard security for user management and protocol fallbacks
         http.authorizeHttpRequests(auth -> auth
@@ -40,8 +44,10 @@ public class WebSecurityConfig {
                 // Disallow everything else
                 .anyRequest().authenticated());
 
-        // Enable standard form login for the OIDC authorization flow
-        http.formLogin(Customizer.withDefaults());
+        // Enable standard form login for the OIDC authorization flow with custom page
+        http.formLogin(form -> form
+                .loginPage("/login")
+                .permitAll());
 
         // Apply JWT for existing custom endpoints (optional but maintained for compatibility)
         http.addFilterBefore(new JwtTokenFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
@@ -63,13 +69,38 @@ public class WebSecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(12);
+        String idForEncode = "bcrypt";
+        java.util.Map<String, PasswordEncoder> encoders = new java.util.HashMap<>();
+        encoders.put(idForEncode, new BCryptPasswordEncoder(12));
+        encoders.put("noop", org.springframework.security.crypto.password.NoOpPasswordEncoder.getInstance());
+
+        return new org.springframework.security.crypto.password.DelegatingPasswordEncoder(idForEncode, encoders) {
+            @Override
+            public boolean matches(CharSequence rawPassword, String encodedPassword) {
+                if (encodedPassword != null && !encodedPassword.startsWith("{")) {
+                    return encoders.get("bcrypt").matches(rawPassword, encodedPassword);
+                }
+                return super.matches(rawPassword, encodedPassword);
+            }
+        };
     }
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration)
             throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(java.util.List.of("http://localhost:5173"));
+        configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type", "x-requested-with"));
+        configuration.setAllowCredentials(true);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 
 }

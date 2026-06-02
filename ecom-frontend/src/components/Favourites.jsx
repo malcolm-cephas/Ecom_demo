@@ -3,13 +3,13 @@ import { Link } from "react-router-dom";
 import { useToast } from "../Context/ToastContext";
 import useProductStore from "../store/useProductStore";
 import useCartStore from "../store/useCartStore";
-import useUserStore from "../store/useUserStore";
+import { useAuth } from "../Context/AuthContext";
 import { Heart, ShoppingCart, ShoppingBag } from "lucide-react";
 
 const Favourites = () => {
     const { products, toggleFavorite, fetchProducts } = useProductStore();
     const { addToCart } = useCartStore();
-    const { isAuthenticated } = useUserStore();
+    const { isAuthenticated } = useAuth();
     const { addToast } = useToast();
 
     useEffect(() => {

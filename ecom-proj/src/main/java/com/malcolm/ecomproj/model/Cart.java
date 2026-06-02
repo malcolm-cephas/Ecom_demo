@@ -22,7 +22,7 @@ public class Cart {
     // Optional: Only one user session for this demo
     private String sessionId;
 
-    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @JsonManagedReference
     private List<CartItem> items = new ArrayList<>();
 

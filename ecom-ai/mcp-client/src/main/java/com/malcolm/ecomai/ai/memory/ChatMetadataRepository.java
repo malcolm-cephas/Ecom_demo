@@ -39,4 +39,18 @@ public class ChatMetadataRepository {
         return jdbcTemplate.query(sql, (rs, rowNum) -> 
             new ChatMessage(rs.getString("content"), rs.getString("type")), chatId);
     }
+
+    public void updateChatDescription(String chatId, String description) {
+        String sql = "UPDATE chat_metadata SET description = ? WHERE conversation_id = ?";
+        jdbcTemplate.update(sql, description, chatId);
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public void deleteChat(String chatId) {
+        String sqlMessages = "DELETE FROM spring_ai_chat_memory WHERE conversation_id = ?";
+        jdbcTemplate.update(sqlMessages, chatId);
+
+        String sqlMetadata = "DELETE FROM chat_metadata WHERE conversation_id = ?";
+        jdbcTemplate.update(sqlMetadata, chatId);
+    }
 }

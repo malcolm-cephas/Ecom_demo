@@ -44,6 +44,7 @@ public class AuthorizationServerConfig {
             .oidc(Customizer.withDefaults()); // Enable OpenID Connect 1.0
 
         http
+            .cors(Customizer.withDefaults())
             .exceptionHandling((exceptions) -> exceptions
                 .defaultAuthenticationEntryPointFor(
                     new LoginUrlAuthenticationEntryPoint("/login"),
@@ -67,6 +68,8 @@ public class AuthorizationServerConfig {
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                 .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
                 .redirectUri("http://localhost:5173/")
+                .postLogoutRedirectUri("http://localhost:5173/")
+                .postLogoutRedirectUri("http://localhost:5173/login")
                 .scope(OidcScopes.OPENID)
                 .scope(OidcScopes.PROFILE)
                 .scope("products.read")

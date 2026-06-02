@@ -25,7 +25,7 @@ public class ChatSummarizer {
     public String summarize(List<Message> messages) {
         // Construct raw conversation text for the summarizer
         String conversation = messages.stream()
-                .map(m -> m.getMessageType().name() + ": " + m.getContent())
+                .map(m -> m.getMessageType().name() + ": " + m.getText())
                 .collect(Collectors.joining("\n"));
 
         String summaryPrompt = """
@@ -43,6 +43,6 @@ public class ChatSummarizer {
                 new SystemMessage("CONVERSATION TO SUMMARIZE:\n" + conversation)
         )));
 
-        return response.getResult().getOutput().getContent();
+        return response.getResult().getOutput().getText();
     }
 }

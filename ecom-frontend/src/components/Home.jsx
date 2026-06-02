@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import useCartStore from "../store/useCartStore";
-import useUserStore from "../store/useUserStore";
+import { useAuth } from "../Context/AuthContext";
 import useProductStore from "../store/useProductStore";
 import { Heart, ShoppingCart, Loader2 } from "lucide-react";
 
 const Home = ({ selectedCategory }) => {
   const { addToCart } = useCartStore();
-  const { isAuthenticated } = useUserStore();
+  const { isAuthenticated } = useAuth();
   const {
     products,
     loading,
