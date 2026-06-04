@@ -28,9 +28,9 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/v3/api-docs/**", "/swagger-ui/**")
+                        .requestMatchers("/api/auth/**", "/v3/api-docs/**", "/swagger-ui/**", "/api/cart/**")
                         .permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/products/**", "/api/product/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/products/**", "/api/product/**", "/api/favorites").permitAll()
                         // Ensure all other endpoints (POST/PUT/DELETE) are secured
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session

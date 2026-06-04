@@ -8,8 +8,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class McpClientApplication {
 
     public static void main(String[] args) {
-        // Load .env variables into system properties for Spring to pick up
-        Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
+        // Load .env variables from the root directory (parent of ecom-ai/mcp-client)
+        Dotenv dotenv = Dotenv.configure().directory("../../").ignoreIfMissing().load();
         dotenv.entries().forEach(entry -> System.setProperty(entry.getKey(), entry.getValue()));
 
         SpringApplication.run(McpClientApplication.class, args);

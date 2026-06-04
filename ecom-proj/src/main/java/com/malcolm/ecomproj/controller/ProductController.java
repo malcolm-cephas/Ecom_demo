@@ -32,7 +32,7 @@ public class ProductController {
 
     private String getUserId(Authentication auth) {
         return (auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser")) ? auth.getName()
-                : null;
+                : "testUser";
     }
 
     /**
@@ -198,5 +198,33 @@ public class ProductController {
         } else {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
+    }
+
+    /**
+     * Retrieves the wishlist/favorites for the authenticated user.
+     */
+    @GetMapping("/favorites")
+    public ResponseEntity<List<Product>> getFavorites(Authentication authentication) {
+        String userId = getUserId(authentication);
+        if (userId == null) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
+        return new ResponseEntity<>(service.getFavorites(userId), HttpStatus.OK);
+    }
+
+    /**
+     * Retrieves low stock products based on a threshold.
+     */
+    @GetMapping("/products/low-stock")
+    public ResponseEntity<List<Product>> getLowStockProducts(@RequestParam(defaultValue = "10") int threshold) {
+        return new ResponseEntity<>(service.getLowStockProducts(threshold), HttpStatus.OK);
+    }
+
+    /**
+     * Retrieves out of stock products.
+     */
+    @GetMapping("/products/out-of-stock")
+    public ResponseEntity<List<Product>> getOutOfStockProducts() {
+        return new ResponseEntity<>(service.getOutOfStockProducts(), HttpStatus.OK);
     }
 }

@@ -152,4 +152,26 @@ public class ProductService {
         return product;
     }
 
+    public List<Product> getFavorites(String userId) {
+        if (userId == null || userId.trim().isEmpty()) {
+            return List.of();
+        }
+        return favoriteRepo.findByUserId(userId).stream()
+                .map(favorite -> {
+                    Product p = favorite.getProduct();
+                    p.setFavorite(true);
+                    return p;
+                })
+                .collect(Collectors.toList());
+    }
+
+    public List<Product> getLowStockProducts(int threshold) {
+        return repo.findByStockQuantityLessThanEqual(threshold);
+    }
+
+
+    public List<Product> getOutOfStockProducts() {
+        return repo.findByStockQuantityLessThanEqual(0);
+    }
+
 }

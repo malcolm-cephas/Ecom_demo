@@ -17,6 +17,7 @@ import ChatBox from "./components/ChatBox"; // Import ChatBox
 import Login from "./components/Login";
 import Register from "./components/Register";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AgentUI from "./components/AgentUI"; // Import AgentUI
 
 function App() {
   // State to track which product category the user has selected in the Navbar
@@ -66,6 +67,7 @@ function App() {
             <Route path="/favourites" element={<Favourites />} />
             <Route path="/product/update/:id" element={<UpdateProduct />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/agent" element={<AgentUI />} />
           </Routes>
 
           {/* AI ChatBox: Floating chat interface available globally */}

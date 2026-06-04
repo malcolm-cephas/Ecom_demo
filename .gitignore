@@ -43,3 +43,4 @@ Thumbs.db
 # Temp / Build Logs
 *.txt
 git_status_output.txt
+ecom-auth-server/authdb.mv.db

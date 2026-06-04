@@ -5,6 +5,9 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
@@ -50,32 +53,47 @@ public class ProductMcpTools {
                 product.isFavorite());
     }
 
+    public record SearchRequest(
+            @JsonProperty(required = true, value = "keyword") 
+            @JsonPropertyDescription("The keyword or phrase to search for") 
+            String keyword
+    ) {}
+
     /**
      * Tool: searchProducts
      * Allows the AI to find products based on natural language queries.
-     * 
-     * @param keyword The search string
-     * @return List of simplified product info
      */
     @Tool(name = "searchProducts", description = "Search for products by a keyword or phrase")
-    public List<ProductInfo> searchProducts(String keyword) {
-        return backendClient.searchProducts(keyword)
+    public List<ProductInfo> searchProducts(SearchRequest request) {
+        return backendClient.searchProducts(request.keyword())
                 .stream()
                 .limit(2) // Temporary limit for debugging
                 .map(this::mapToInfo)
                 .collect(Collectors.toList());
     }
 
+    public record ProductIdRequest(
+            @JsonProperty(required = true, value = "id") 
+            @JsonPropertyDescription("The ID of the product") 
+            String id
+    ) {}
+
     @Tool(description = "Get details of a specific product by its ID")
-    public ProductInfo getProductDetails(int id) {
-        Product product = backendClient.getProduct(id);
+    public ProductInfo getProductDetails(ProductIdRequest request) {
+        int productId;
+        try {
+            productId = Integer.parseInt(request.id());
+        } catch (NumberFormatException e) {
+            return null; // or throw an exception, but null is safer for tool
+        }
+        Product product = backendClient.getProduct(productId);
         if (product != null) {
             return mapToInfo(product);
         }
         return null;
     }
 
-    @Tool(description = "List all available products")
+    @Tool(description = "List all available products. No parameters required.")
     public List<ProductInfo> listAllProducts() {
         return backendClient.getAllProducts()
                 .stream()
@@ -85,10 +103,13 @@ public class ProductMcpTools {
     }
 
     @Tool(description = "Toggle favorite status of a product by its ID")
-    public String toggleFavorite(int id) {
+    public String toggleFavorite(ProductIdRequest request) {
         try {
-            backendClient.toggleFavorite(id);
-            return "Successfully toggled favorite for product with ID: " + id;
+            int productId = Integer.parseInt(request.id());
+            backendClient.toggleFavorite(productId);
+            return "Successfully toggled favorite for product with ID: " + productId;
+        } catch (NumberFormatException e) {
+            return "Failed to toggle favorite: ID must be a valid number.";
         } catch (Exception e) {
             return "Failed to toggle favorite: " + e.getMessage();
         }
@@ -99,12 +120,18 @@ public class ProductMcpTools {
      * Returns a human-readable string about stock levels.
      * The AI uses this to answer "do you have the iPhone 15 in stock?"
      */
+    public record ProductNameRequest(
+            @JsonProperty(required = true, value = "productName") 
+            @JsonPropertyDescription("The name of the product to check stock for") 
+            String productName
+    ) {}
+
     @Tool(description = "Check stock availability for a product by name. Returns the available quantity.")
-    public String checkStock(String productName) {
+    public String checkStock(ProductNameRequest request) {
         // Try exact match first, then fallback to removing spaces
-        List<Product> products = searchProductsWithFallback(productName);
+        List<Product> products = searchProductsWithFallback(request.productName());
         if (products.isEmpty()) {
-            return "Product not found: " + productName;
+            return "Product not found: " + request.productName();
         }
 
         // Build a report for multiple matches
@@ -116,18 +143,28 @@ public class ProductMcpTools {
         return sb.toString();
     }
 
+    public record AddToCartRequest(
+            @JsonProperty(required = true, value = "productName") 
+            @JsonPropertyDescription("The name of the product to add to cart") 
+            String productName,
+            
+            @JsonProperty(required = true, value = "quantity") 
+            @JsonPropertyDescription("The number of items to add") 
+            String quantity
+    ) {}
+
     @Tool(description = "Add a product to the cart after verifying stock. Requires product name and quantity.")
-    public String addToCart(String productName, String quantity) {
+    public String addToCart(AddToCartRequest request) {
         int quantityInt;
         try {
-            quantityInt = Integer.parseInt(quantity);
+            quantityInt = Integer.parseInt(request.quantity());
         } catch (NumberFormatException e) {
             return "FAILURE: Quantity must be a valid number.";
         }
 
-        List<Product> products = searchProductsWithFallback(productName);
+        List<Product> products = searchProductsWithFallback(request.productName());
         if (products.isEmpty()) {
-            return "Product not found: " + productName;
+            return "Product not found: " + request.productName();
         }
 
         // Use the first match
@@ -160,7 +197,7 @@ public class ProductMcpTools {
      * Tool: getStorePolicies
      * Provides a static knowledge base of store policies (static RAG).
      */
-    @Tool(description = "Get the store policies regarding shipping, returns, and warranties")
+    @Tool(description = "Get the store policies regarding shipping, returns, and warranties. No parameters required.")
     public String getStorePolicies() {
         return """
                 Ecommerce Store Policies:
@@ -170,5 +207,35 @@ public class ProductMcpTools {
                 - Restocking Fee: 10% for opened electronics (e.g., phones, laptops).
                 - Currency: All prices are in Indian Rupees (₹).
                 """;
+    }
+
+    public record LowStockRequest(
+            @JsonProperty(required = true, value = "threshold") 
+            @JsonPropertyDescription("The maximum stock amount to be considered low stock (e.g. 10)") 
+            String threshold
+    ) {}
+
+    @Tool(description = "Get a list of products that have low stock (equal to or below the specified threshold)")
+    public List<ProductInfo> getLowStockProducts(LowStockRequest request) 
+    {
+        int thresholdInt = 10;
+        try {
+            thresholdInt = Integer.parseInt(request.threshold());
+        } catch (NumberFormatException e) {
+            // fallback to default if LLM provides bad string
+        }
+        return backendClient.getLowStockProducts(thresholdInt)
+                .stream()
+                .map(this::mapToInfo)
+                .collect(Collectors.toList());
+    }
+
+    @Tool(description = "Get a list of products that are completely out of stock. No parameters required.")
+    public List<ProductInfo> getOutOfStockProducts() 
+    {
+        return backendClient.getOutOfStockProducts()
+                .stream()
+                .map(this::mapToInfo)
+                .collect(Collectors.toList());
     }
 }

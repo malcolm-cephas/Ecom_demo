@@ -8,10 +8,14 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class EcomProjApplication {
 
     public static void main(String[] args) {
-        // Load .env variables into system properties for Spring to pick up
-        Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
-        dotenv.entries().forEach(entry -> System.setProperty(entry.getKey(), entry.getValue()));
+        try {
+            // Load .env variables from the root directory (parent of ecom-proj)
+            Dotenv dotenv = Dotenv.configure().directory("../").ignoreIfMissing().load();
+            dotenv.entries().forEach(entry -> System.setProperty(entry.getKey(), entry.getValue()));
 
-        SpringApplication.run(EcomProjApplication.class, args);
+            SpringApplication.run(EcomProjApplication.class, args);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

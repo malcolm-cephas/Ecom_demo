@@ -14,7 +14,7 @@ export const useAuth = () => {
             fetchCart(); // Fetch personalized cart on login
         } else if (!loginInProgress && !token) {
             clearAuth();
-            setCart({ items: [] });
+            fetchCart(); // Fetch testUser cart from backend
         }
     }, [token, idTokenData, loginInProgress, setAuth, clearAuth, fetchCart, setCart]);
 

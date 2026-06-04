@@ -15,6 +15,7 @@
         <module>ecom-auth-server</module>
         <module>ecom-ai/mcp-client</module>
         <module>ecom-ai/mcp-server</module>
+        <module>ecom-agent</module>
     </modules>
 
 </project>

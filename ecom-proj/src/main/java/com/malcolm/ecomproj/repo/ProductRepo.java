@@ -23,4 +23,5 @@ public interface ProductRepo extends JpaRepository<Product, Integer> {
             "LOWER(p.category) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     Page<Product> searchProducts(String keyword, Pageable pageable);
 
+    List<Product> findByStockQuantityLessThanEqual(int stockQuantity);
 }

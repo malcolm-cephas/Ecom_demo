@@ -15,6 +15,7 @@ import {
   PlusCircle,
   Menu
 } from "lucide-react";
+import { FaRobot } from "react-icons/fa";
 
 const Navbar = ({ onSelectCategory, onSearch }) => {
   const { cart } = useCartStore();
@@ -99,6 +100,11 @@ const Navbar = ({ onSelectCategory, onSearch }) => {
             <ul className="navbar-nav me-auto mb-2 mb-lg-0 align-items-center">
               <li className="nav-item">
                 <Link className="nav-link fw-medium" to="/">Home</Link>
+              </li>
+              <li className="nav-item">
+                <Link className="nav-link fw-medium text-success" to="/agent">
+                  <FaRobot className="me-1 mb-1" /> Autonomous Agent
+                </Link>
               </li>
 
               <li className="nav-item dropdown">

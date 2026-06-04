@@ -15,34 +15,37 @@ public class CartController {
 
     private final CartService cartService;
 
+    private String getUserId(Authentication auth) {
+        return (auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser")) ? auth.getName()
+                : "testUser";
+    }
+
     @GetMapping
     public ResponseEntity<Cart> getCart(Authentication authentication) {
-        if (authentication == null)
-            return ResponseEntity.status(401).build();
-        return ResponseEntity.ok(cartService.getCart(authentication.getName()));
+        String userId = getUserId(authentication);
+        if (userId.equals("anonymousUser")) return ResponseEntity.status(401).build();
+        return ResponseEntity.ok(cartService.getCart(userId));
     }
 
     @PostMapping("/add")
     public ResponseEntity<Cart> addToCart(@RequestParam int productId, @RequestParam int quantity,
+            @RequestParam(required = false) String targetUserId,
             Authentication authentication) {
-        if (authentication == null)
-            return ResponseEntity.status(401).build();
-        return ResponseEntity.ok(cartService.addToCart(authentication.getName(), productId, quantity));
+        String userId = (targetUserId != null && !targetUserId.isEmpty()) ? targetUserId : getUserId(authentication);
+        return ResponseEntity.ok(cartService.addToCart(userId, productId, quantity));
     }
 
     @DeleteMapping("/remove/{productId}")
     public ResponseEntity<Cart> removeFromCart(@PathVariable int productId, Authentication authentication) {
-        if (authentication == null)
-            return ResponseEntity.status(401).build();
-        return ResponseEntity.ok(cartService.removeFromCart(authentication.getName(), productId));
+        String userId = getUserId(authentication);
+        return ResponseEntity.ok(cartService.removeFromCart(userId, productId));
     }
 
     @PutMapping("/update/{productId}")
     public ResponseEntity<Cart> updateQuantity(@PathVariable int productId, @RequestParam int quantity,
             Authentication authentication) {
-        if (authentication == null)
-            return ResponseEntity.status(401).build();
-        return ResponseEntity.ok(cartService.updateQuantity(authentication.getName(), productId, quantity));
+        String userId = getUserId(authentication);
+        return ResponseEntity.ok(cartService.updateQuantity(userId, productId, quantity));
     }
 
     @DeleteMapping("/clear")

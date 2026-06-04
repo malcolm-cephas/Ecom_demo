@@ -99,4 +99,24 @@ public class BackendClient {
                                 .toBodilessEntity() // We don't expect a response body, just 200 OK
                                 .block();
         }
+
+        public List<Product> getLowStockProducts(int threshold) {
+                return webClient.get()
+                                .uri(uriBuilder -> uriBuilder.path("/products/low-stock")
+                                                .queryParam("threshold", threshold)
+                                                .build())
+                                .retrieve()
+                                .bodyToFlux(Product.class)
+                                .collectList()
+                                .block();
+        }
+
+        public List<Product> getOutOfStockProducts() {
+                return webClient.get()
+                                .uri("/products/out-of-stock")
+                                .retrieve()
+                                .bodyToFlux(Product.class)
+                                .collectList()
+                                .block();
+        }
 }
