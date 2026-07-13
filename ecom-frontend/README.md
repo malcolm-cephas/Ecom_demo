@@ -6,7 +6,7 @@ This is the user interface for the E-Commerce platform, built with **React** and
 
 *   **Product Gallery**: Browse products with dynamic images served directly from the backend.
 *   **Search & Filter**: Find products using a real-time search bar and category filters.
-*   **AI Chat Integration**: An integrated chat widget that allows users to talk to an intelligent store assistant powered by Groq AI.
+*   **AI Chat Integration**: An integrated chat widget that allows users to talk to an intelligent store assistant powered by the Ecom AI ecosystem.
 *   **Cart & Favorites**: Full shopping functionality including managing a shopping cart and a "Favorites" list.
 *   **Clean UI**: Responsive design built with Bootstrap 5 and customized CSS.
 *   **Request Logging**: All incoming requests are logged with `[Request]` prefix for debugging.

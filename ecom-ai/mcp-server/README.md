@@ -1,26 +1,30 @@
-# E-Commerce MCP Server (Tools & Services)
+# E-Commerce MCP Server (Tool Hub)
 
-This module acts as the **Resource Provider** in the MCP architecture. It hosts all the business logic, database interactions, and specialized tools that an AI agent can use.
+This module acts as the **Resource Provider** in the MCP architecture. It exposes the capabilities of the Core Backend to the AI ecosystem.
 
 ## 🎯 Primary Functions
 
 1.  **MCP Tool Provider**: Exposes standardized tools (like `searchProducts`, `getProductDetails`, `listAllProducts`) via the **Model Context Protocol (MCP)**.
-2.  **Resource Host**: Manages the product inventory and data analytics database.
+2.  **API Gateway**: Instead of connecting directly to the database, it forwards AI tool invocations as standard REST calls to the **Core Backend** (port 8080).
 3.  **SSE Endpoint**: Provides a Server-Sent Events (SSE) stream at `http://localhost:9091/sse` for clients to connect and discover tools.
-4.  **Secured Access**: Configured for **HTTP Basic Authentication**. Default credentials (`client-01` / `ecom-secret-key-123`) can be overridden via `MCP_CLIENT_USER` and `MCP_API_KEY` environment variables.
-5.  **Request Logging**: All incoming requests are logged with `[MCP-SERVER-REQUEST]` prefix, including detailed header tracing.
+4.  **Secured Access**: Configured to require an **OAuth2 Bearer Token** (issued by the Ecom Auth Server) for tool discovery and execution.
+5.  **Request Logging**: All incoming requests are logged with the `[MCP-SERVER-REQUEST]` prefix, including detailed header tracing.
 
 ## 🛠️ Technology Stack
 
 *   **Java 21**
 *   **Spring Boot 3.3.2**
 *   **Spring AI** (MCP Server Starter)
-*   **MySQL**: For product and analytics data.
+*   **OAuth2 Resource Server**
 
 ## 🏃‍♂️ Setup & Run
 
-### 1. Database Configuration
-Ensure your MySQL database is running and credentials in `src/main/resources/application.properties` are correct.
+### 1. Configuration
+Check `src/main/resources/application.properties`. It is pre-configured to point to the core backend:
+```properties
+server.port=9091
+app.backend.url=http://localhost:8080/api
+```
 
 ### 2. Start Application
 
@@ -44,12 +48,6 @@ Logs are output to both:
 - **Console/Terminal**: Real-time monitoring
 - **Log File**: `../../Logs/mcp_server.log`
 
-Request format:
-```
-[MCP-SERVER-REQUEST] POST /mcp/message
-[MCP-SERVER-REQUEST] GET /sse
-```
-
 ---
 
 ## 🤖 MCP Integration
@@ -72,11 +70,11 @@ Use the included `mcp-bridge.js` to bridge the SSE protocol to Stdio for tools l
 *   `searchProducts`: Search inventory by keyword.
 *   `getProductDetails`: Fetch details for a specific product ID.
 *   `listAllProducts`: List all products in the catalog.
-*   `analyzeSales`: SQL-based analytics for product data.
+*   `getUserActivity`: Analyze database metrics.
+*   `getCurrentTime`: Time utility for context-aware responses.
 
 ---
 
 ## 📂 Structure
 *   `com.malcolm.ecomai.mcp`: Definitions of tools exposed to AI.
-*   `com.malcolm.ecomai.service`: Core business logic.
-*   `com.malcolm.ecomai.repo`: JPA repositories for database access.
+*   `com.malcolm.ecomai.config`: OAuth2 resource server security configurations.

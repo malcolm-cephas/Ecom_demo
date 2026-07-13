@@ -12,7 +12,7 @@ The foundational **Spring Boot** service that powers the E-Commerce platform. It
 6.  **Request Logging**: All incoming HTTP requests are logged with `[BACKEND-REQUEST]` prefix for debugging and monitoring.
 7.  **Data Provider for MCP**: Serves as the authoritative source for all products and categories used by the AI assistant.
 
-> **Note**: This service is the "Source of Truth" for the entire ecosystem. AI and Chat capabilities inhabit the `ecom-ai` services but rely strictly on this API.
+> **Note**: This service is the "Source of Truth" for the entire ecosystem. The AI orchestration layers (`ecom-agent`, `ecom-ai`) rely strictly on this API to access product data.
 
 ---
 
