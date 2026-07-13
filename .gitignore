@@ -19,6 +19,7 @@ mvnw.cmd
 node_modules/
 dist/
 build/
+Logs/
 .env
 .env.local
 .env.development.local
@@ -44,3 +45,6 @@ Thumbs.db
 *.txt
 git_status_output.txt
 ecom-auth-server/authdb.mv.db
+ecom-frontend/vite.config.js.*
+groq_models.json
+openrouter_models.json

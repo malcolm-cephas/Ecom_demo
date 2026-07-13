@@ -12,6 +12,7 @@ const AgentUI = () => {
     const [agentState, setAgentState] = useState(null);
     const [userReply, setUserReply] = useState("");
     const fetchCart = useCartStore(state => state.fetchCart);
+    const addToCart = useCartStore(state => state.addToCart);
     const user = useUserStore(state => state.user);
 
     const runAgent = async (e) => {
@@ -56,8 +57,7 @@ const AgentUI = () => {
                 userId: currentUserId,
                 budget: Number(budget),
                 memory: updatedMemory,
-                cartItems: agentState.cartItems,
-                currentCartTotal: agentState.currentCartTotal
+                recommendations: agentState.recommendations
             }, {
                 headers: { "Content-Type": "application/json" }
             });
@@ -72,6 +72,21 @@ const AgentUI = () => {
         }
     };
 
+    const parseIntents = (response) => {
+        if (!response) return { text: "No final response provided.", intent: null };
+        try {
+            const jsonMatch = response.match(/\{[\s\S]*?\}/);
+            if (jsonMatch) {
+                const intent = JSON.parse(jsonMatch[0]);
+                const text = response.replace(jsonMatch[0], "").trim();
+                return { text, intent };
+            }
+        } catch (e) {}
+        return { text: response, intent: null };
+    };
+
+    const parsed = agentState ? parseIntents(agentState.finalResponse) : null;
+
     return (
         <div className="container" style={{ marginTop: "100px", marginBottom: "50px" }}>
             <div className="row justify-content-center">
@@ -82,9 +97,7 @@ const AgentUI = () => {
                             <h3 className="mb-0">Autonomous Shopping Agent (ReAct)</h3>
                         </div>
                         <div className="card-body p-4 bg-light">
-                            <p className="text-muted mb-4">
-                                This agent uses a native Java ReAct loop to iteratively think and interact with backend APIs to achieve your goal.
-                            </p>
+                            
                             
                             <form onSubmit={runAgent} className="mb-4">
                                 <div className="mb-3">
@@ -130,8 +143,29 @@ const AgentUI = () => {
                                 <div className="mt-5 animate__animated animate__fadeIn">
                                     <h4 className="fw-bold mb-3 border-bottom pb-2">Final Response</h4>
                                     <div className={`alert ${agentState.requiresUserInput ? 'alert-warning' : 'alert-success'}`}>
-                                        <ReactMarkdown>{agentState.finalResponse || "No final response provided."}</ReactMarkdown>
+                                        <ReactMarkdown>{parsed?.text || "No final response provided."}</ReactMarkdown>
                                     </div>
+                                    
+                                    {parsed?.intent?.type === 'checkout_intent' && (
+                                        <div className="mt-3 text-center mb-4">
+                                            <a href={parsed.intent.url} target="_blank" rel="noreferrer" className="btn btn-dark btn-lg px-5 py-3 rounded-pill fw-bold shadow-lg">
+                                                Proceed to Secure Checkout (Shop Pay)
+                                            </a>
+                                        </div>
+                                    )}
+                                    
+                                    {parsed?.intent?.type === 'catalog_intent' && (
+                                        <div className="mt-3 mb-4 d-flex justify-content-center">
+                                            <div className="card border-0 shadow-sm" style={{maxWidth: '300px'}}>
+                                                <img src="https://placehold.co/300x200?text=Global+Product" className="card-img-top rounded-top" alt="Product" />
+                                                <div className="card-body text-center bg-white rounded-bottom border border-top-0">
+                                                    <h5 className="card-title fw-bold">Shopify Global Product</h5>
+                                                    <p className="card-text text-success fw-bold mb-3">SKU: {parsed.intent.sku}</p>
+                                                    <button className="btn btn-outline-primary rounded-pill w-100">View Details</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                     
                                     {agentState.requiresUserInput && (
                                         <form onSubmit={handleUserReply} className="mb-4 mt-3 p-3 bg-white rounded border shadow-sm">
@@ -151,6 +185,33 @@ const AgentUI = () => {
                                                 </button>
                                             </div>
                                         </form>
+                                    )}
+
+                                    {agentState.recommendations && agentState.recommendations.length > 0 && (
+                                        <div className="mb-4 mt-4">
+                                            <h4 className="fw-bold mb-3 border-bottom pb-2 text-success">Recommended For You</h4>
+                                            <div className="row g-3">
+                                                {agentState.recommendations.map((rec, idx) => (
+                                                    <div key={idx} className="col-12">
+                                                        <div className="card h-100 border-success shadow-sm">
+                                                            <div className="card-body d-flex justify-content-between align-items-center">
+                                                                <div>
+                                                                    <h5 className="card-title fw-bold text-dark">{rec.name}</h5>
+                                                                    <p className="card-text text-primary fw-bold mb-1">₹{rec.price}</p>
+                                                                    <p className="card-text small text-muted"><FaRobot className="me-1"/> <em>{rec.reason}</em></p>
+                                                                </div>
+                                                                <button 
+                                                                    className="btn btn-success"
+                                                                    onClick={() => addToCart(rec.productId, 1)}
+                                                                >
+                                                                    Add to Cart
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
                                     )}
                                     
                                     <h4 className="fw-bold mt-4 mb-3 border-bottom pb-2">Agent Internal Memory (Reasoning Trace)</h4>

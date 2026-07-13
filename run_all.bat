@@ -74,7 +74,7 @@ if %errorlevel% neq 0 (
 echo MCP Server is UP!
 echo.
 
-:: 4. Start MCP Client (Bridge, Port 9090)
+:: 4. Start MCP Client (Bridge, Port 9090) [DORMANT]
 echo [4/7] Launching MCP Client (Port 9090)...
 start "MCP Client (9090)" powershell -NoExit -Command "cd 'ecom-ai/mcp-client'; & '.\mvnw.cmd' spring-boot:run 2>&1 | Tee-Object -FilePath '%~dp0Logs\mcp_client.log'"
 echo Waiting for MCP Client to start on port 9090...

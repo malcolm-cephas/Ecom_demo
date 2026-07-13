@@ -35,10 +35,9 @@ public class AIAssistantService {
     private int currentModelIndex = 0;
 
     private final ChatMetadataRepository chatMetadataRepository;
-    
+
     private static final String DEFAULT_USER_ID = "anonymous";
-    private static final String DESCRIPTION_PROMPT = 
-        "Generate a chat description based on the message, limiting the description to 30 characters: ";
+    private static final String DESCRIPTION_PROMPT = "Generate a chat description based on the message, limiting the description to 30 characters: ";
 
     public AIAssistantService(ChatClient.Builder chatClientBuilder,
             List<ToolCallbackProvider> toolCallbackProviders,
@@ -50,7 +49,7 @@ public class AIAssistantService {
         System.out.println("Discovered " + toolCallbackProviders.size() + " ToolCallbackProviders");
         for (ToolCallbackProvider provider : toolCallbackProviders) {
             System.out.println("Provider: " + provider.getClass().getName());
-            System.out.println("  Tool count: " + provider.getToolCallbacks().length);
+            System.out.println("Tool count: " + provider.getToolCallbacks().length);
         }
         String systemPrompt = """
                 You are a helpful AI assistant for an Ecommerce platform.
@@ -59,11 +58,12 @@ public class AIAssistantService {
                 Always use the provided tools to get accurate information about products,
                 stock levels, and user activity.
                 """;
- 
+
         // Initialize ChatClient with system prompt, memory advisor and registered tools
         this.chatClient = chatClientBuilder
                 .defaultSystem(systemPrompt)
-                .defaultAdvisors(org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor.builder(chatMemory).build())
+                .defaultAdvisors(
+                        org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor.builder(chatMemory).build())
                 .defaultToolCallbacks(toolCallbackProviders.toArray(new ToolCallbackProvider[0]))
                 .build();
 
@@ -94,11 +94,11 @@ public class AIAssistantService {
             } else {
                 logger.warn("groq_models.json not found in resources");
                 // Fallback default
-                availableModels.add("llama-3.3-70b-versatile");
+                availableModels.add("llama-3.3-70b");
             }
         } catch (IOException e) {
             logger.error("Failed to load models from file", e);
-            availableModels.add("llama-3.3-70b-versatile");
+            availableModels.add("llama-3.3-70b");
         }
     }
 
@@ -117,12 +117,13 @@ public class AIAssistantService {
         int attempts = 0;
 
         // Ensure we always have a conversationId for the chat memory
-        String activeConversationId = (conversationId != null && !conversationId.isBlank()) 
-            ? conversationId 
-            : "default_session";
-        
+        String activeConversationId = (conversationId != null && !conversationId.isBlank())
+                ? conversationId
+                : "default_session";
+
         // Validate if conversationId exists in metadata (except for default_session)
-        if (!activeConversationId.equals("default_session") && !chatMetadataRepository.chatIdExists(activeConversationId)) {
+        if (!activeConversationId.equals("default_session")
+                && !chatMetadataRepository.chatIdExists(activeConversationId)) {
             logger.warn("Chat ID {} does not exist in metadata. It might be an old session.", activeConversationId);
         }
 
@@ -136,11 +137,13 @@ public class AIAssistantService {
                         .user(Objects.requireNonNull(userMessage))
                         .options(OpenAiChatOptions.builder().model(currentModel).build())
                         // Add the conversation ID to the advisors parameters
-                        .advisors(a -> a.param(org.springframework.ai.chat.memory.ChatMemory.CONVERSATION_ID, activeConversationId))
+                        .advisors(a -> a.param(org.springframework.ai.chat.memory.ChatMemory.CONVERSATION_ID,
+                                activeConversationId))
                         .call()
                         .content();
             } catch (Exception e) {
-                // Check for rate limit error (429) or related messages ("probation", "rate limit")
+                // Check for rate limit error (429) or related messages ("probation", "rate
+                // limit")
                 if (e.getMessage() != null
                         && (e.getMessage().contains("429") || e.getMessage().toLowerCase().contains("probation")
                                 || e.getMessage().toLowerCase().contains("rate limit"))) {
